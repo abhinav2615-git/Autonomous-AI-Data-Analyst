@@ -2,9 +2,7 @@ import pandas as pd
 
 
 def profile_data(df: pd.DataFrame) -> dict:
-    """
-    Generate a basic profile of a Pandas DataFrame.
-    """
+    """Generate a basic profile of a Pandas DataFrame."""
 
     profile = {
         "rows": len(df),

@@ -3,9 +3,7 @@ import pandas as pd
 
 
 def load_data(file_path: str) -> pd.DataFrame:
-    """
-    Load a CSV or Excel file into a Pandas DataFrame.
-    """
+    """Load a CSV or Excel file into a Pandas DataFrame."""
 
     path = Path(file_path)
 
