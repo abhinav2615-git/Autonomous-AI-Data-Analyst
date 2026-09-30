@@ -37,12 +37,19 @@ def main() -> None:
         df,
     )
 
-    print("\nEXECUTION COMPLETE")
-    print("-------------------------")
+    print("\nCreating structured response...")
 
-    for tool_name, result in results.items():
-        print(f"\nTool: {tool_name}")
-        print(result.head(10))
+    response = executor.create_response(
+        plan,
+        results,
+    )
+
+    print("\nAGENT RESPONSE")
+    print("-------------------------")
+    print(f"Answer: {response.answer}")
+    print(f"Confidence: {response.confidence}")
+    print(f"Tools Used: {response.tools_used}")
+    print(f"Status: {response.status}")
 
 
 if __name__ == "__main__":
