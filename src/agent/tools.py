@@ -8,47 +8,44 @@ from src.tools.data_analyzer import (
 )
 
 from src.tools.data_profiler import profile_data
+
 from src.agent.tool_registry import ToolRegistry
 
 
 def create_tool_registry() -> ToolRegistry:
     """Create and configure the agent tool registry."""
-
     registry = ToolRegistry()
 
+    # Data profiling tool
+    registry.register(
+        "data_profiler",
+        profile_data,
+    )
+
+    # Data analysis tools
     registry.register(
         "revenue_by_country",
         revenue_by_country,
     )
-
     registry.register(
         "revenue_by_product",
         revenue_by_product,
     )
-
     registry.register(
         "top_products_by_revenue",
         top_products_by_revenue,
     )
-
     registry.register(
         "top_customers_by_revenue",
         top_customers_by_revenue,
     )
-
     registry.register(
         "revenue_by_month",
         revenue_by_month,
     )
-
     registry.register(
         "revenue_by_year",
         revenue_by_year,
-    )
-
-    registry.register(
-        "data_profiler",
-        profile_data,
     )
 
     return registry
