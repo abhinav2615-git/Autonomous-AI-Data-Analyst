@@ -7,6 +7,7 @@ from src.tools.data_analyzer import (
     revenue_by_year,
 )
 
+from src.tools.data_profiler import profile_data
 from src.agent.tool_registry import ToolRegistry
 
 
@@ -43,6 +44,11 @@ def create_tool_registry() -> ToolRegistry:
     registry.register(
         "revenue_by_year",
         revenue_by_year,
+    )
+
+    registry.register(
+        "data_profiler",
+        profile_data,
     )
 
     return registry

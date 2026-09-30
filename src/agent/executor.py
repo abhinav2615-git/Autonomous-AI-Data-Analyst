@@ -8,10 +8,24 @@ from src.models.agent import AgentResponse, AnalysisPlan
 
 
 class AgentExecutor:
-    """Execute tools selected by an analysis plan."""
+    """Execute tools selected by the AI agent."""
 
     def __init__(self, registry: ToolRegistry) -> None:
         self.registry = registry
+
+    def profile_dataset(
+        self,
+        df: pd.DataFrame,
+    ) -> dict[str, Any]:
+        """Profile the dataset before analysis."""
+
+        profiler = self.registry.get(
+            "data_profiler"
+        )
+
+        profile = profiler(df)
+
+        return profile
 
     def execute_plan(
         self,
@@ -23,7 +37,9 @@ class AgentExecutor:
         results: dict[str, Any] = {}
 
         for tool_name in plan.tools:
-            tool = self.registry.get(tool_name)
+            tool = self.registry.get(
+                tool_name
+            )
 
             result = tool(df)
 
