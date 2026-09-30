@@ -2,6 +2,7 @@ from typing import Any
 
 import pandas as pd
 
+from src.agent.result_interpreter import interpret_result
 from src.agent.tool_registry import ToolRegistry
 from src.models.agent import AgentResponse, AnalysisPlan
 
@@ -48,37 +49,14 @@ class AgentExecutor:
         first_tool = plan.tools[0]
         result = results[first_tool]
 
-        if isinstance(result, pd.DataFrame):
-            if result.empty:
-                answer = "The analysis returned no results."
-                confidence = 0.5
-            else:
-                first_row = result.iloc[0]
-
-                if "Country" in result.columns:
-                    answer = (
-                        f"The country with the highest revenue "
-                        f"is {first_row['Country']}."
-                    )
-                    confidence = 0.95
-
-                else:
-                    answer = (
-                        f"The analysis completed successfully "
-                        f"using the {first_tool} tool."
-                    )
-                    confidence = 0.85
-
-        else:
-            answer = (
-                f"The analysis completed successfully "
-                f"using the {first_tool} tool."
-            )
-            confidence = 0.85
+        answer = interpret_result(
+            first_tool,
+            result,
+        )
 
         return AgentResponse(
             answer=answer,
-            confidence=confidence,
+            confidence=0.95,
             tools_used=plan.tools,
             status="success",
         )
