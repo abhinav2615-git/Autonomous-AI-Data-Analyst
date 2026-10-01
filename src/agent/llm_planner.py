@@ -21,7 +21,7 @@ class LLMPlanner(BasePlanner):
         self,
         question: str,
     ) -> AnalysisPlan:
-        """Create a structured analysis plan using an LLM."""
+        """Create and validate an LLM-generated plan."""
 
         if not question.strip():
             raise ValueError(
@@ -45,7 +45,7 @@ class LLMPlanner(BasePlanner):
         self,
         question: str,
     ) -> str:
-        """Build the planning prompt using registered tools."""
+        """Build the planning prompt."""
 
         available_tools = (
             self.registry.list_tools()
@@ -75,11 +75,17 @@ Rules:
 3. Do not invent tools.
 4. Keep the objective concise.
 5. Provide clear analysis steps.
-6. Return ONLY valid JSON.
-7. The JSON must contain exactly these fields:
-   objective
-   steps
-   tools
+6. Every selected tool must correspond to
+   at least one analysis step.
+7. Every analysis step must correspond to
+   a selected tool.
+8. Do not return an empty tools list.
+9. Do not return an empty steps list.
+10. Return ONLY valid JSON.
+11. The JSON must contain exactly these fields:
+    objective
+    steps
+    tools
 
 Example:
 
@@ -107,11 +113,10 @@ User question:
         """Parse and validate the LLM response."""
 
         try:
-            data = json.loads(
-                response
-            )
+            data = json.loads(response)
 
         except json.JSONDecodeError as error:
+
             raise ValueError(
                 "LLM returned invalid JSON."
             ) from error
@@ -120,11 +125,44 @@ User question:
             data
         )
 
-        self._validate_tools(
+        self._validate_plan(
             plan
         )
 
         return plan
+
+    def _validate_plan(
+        self,
+        plan: AnalysisPlan,
+    ) -> None:
+        """Validate the structure and tools in a plan."""
+
+        if not plan.objective.strip():
+            raise ValueError(
+                "Analysis plan objective cannot be empty."
+            )
+
+        if not plan.steps:
+            raise ValueError(
+                "Analysis plan must contain "
+                "at least one step."
+            )
+
+        if not plan.tools:
+            raise ValueError(
+                "Analysis plan must contain "
+                "at least one tool."
+            )
+
+        if len(plan.steps) < len(plan.tools):
+            raise ValueError(
+                "Analysis plan must contain at least "
+                "one step for every selected tool."
+            )
+
+        self._validate_tools(
+            plan
+        )
 
     def _validate_tools(
         self,
@@ -143,6 +181,7 @@ User question:
         ]
 
         if invalid_tools:
+
             raise ValueError(
                 "LLM selected unregistered tools: "
                 f"{invalid_tools}"
