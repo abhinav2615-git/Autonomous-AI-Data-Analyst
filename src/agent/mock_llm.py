@@ -4,40 +4,139 @@ from src.models.agent import AnalysisPlan
 def create_mock_analysis_plan(
     question: str,
 ) -> AnalysisPlan:
-    """Create a mock analysis plan for development."""
+    """Create an analysis plan for development without an LLM."""
 
     if not question.strip():
         raise ValueError("Question cannot be empty.")
 
     question_lower = question.lower()
 
-    if "country" in question_lower and "revenue" in question_lower:
+    # ---------------------------------------------------------
+    # COUNTRY + REVENUE
+    # ---------------------------------------------------------
+    if (
+        "country" in question_lower
+        and "revenue" in question_lower
+    ):
         return AnalysisPlan(
             objective="Analyze revenue by country.",
             steps=[
                 "Calculate revenue using Quantity × UnitPrice.",
                 "Group revenue by Country.",
-                "Sort countries by revenue in descending order.",
-                "Return the countries ranked by revenue.",
+                "Sort countries by revenue.",
+                "Return the country-level revenue results.",
             ],
             tools=["revenue_by_country"],
         )
 
-    if "product" in question_lower and "revenue" in question_lower:
+    # ---------------------------------------------------------
+    # PRODUCT + REVENUE
+    # ---------------------------------------------------------
+    if (
+        "product" in question_lower
+        and "revenue" in question_lower
+    ):
         return AnalysisPlan(
             objective="Analyze revenue by product.",
             steps=[
                 "Calculate revenue using Quantity × UnitPrice.",
                 "Group revenue by product.",
-                "Sort products by revenue in descending order.",
-                "Return the products ranked by revenue.",
+                "Sort products by revenue.",
+                "Return the product-level revenue results.",
             ],
             tools=["revenue_by_product"],
         )
 
-    if "monthly" in question_lower and "revenue" in question_lower:
+    # ---------------------------------------------------------
+    # TOP PRODUCTS + REVENUE
+    # ---------------------------------------------------------
+    if (
+        ("top" in question_lower or "highest" in question_lower)
+        and "product" in question_lower
+        and "revenue" in question_lower
+    ):
         return AnalysisPlan(
-            objective="Analyze revenue across months.",
+            objective="Find the products with the highest revenue.",
+            steps=[
+                "Calculate revenue using Quantity × UnitPrice.",
+                "Group revenue by product.",
+                "Sort products by revenue in descending order.",
+                "Return the top products by revenue.",
+            ],
+            tools=["top_products_by_revenue"],
+        )
+
+    # ---------------------------------------------------------
+    # PRODUCT + UNITS / QUANTITY / SALES
+    # ---------------------------------------------------------
+    if (
+        "product" in question_lower
+        and (
+            "unit" in question_lower
+            or "quantity" in question_lower
+            or "sold" in question_lower
+        )
+    ):
+        return AnalysisPlan(
+            objective="Analyze units sold by product.",
+            steps=[
+                "Group the dataset by product.",
+                "Calculate total units sold for each product.",
+                "Sort products by units sold.",
+                "Return the product-level unit results.",
+            ],
+            tools=["units_by_product"],
+        )
+
+    # ---------------------------------------------------------
+    # CUSTOMER + REVENUE
+    # ---------------------------------------------------------
+    if (
+        "customer" in question_lower
+        and "revenue" in question_lower
+    ):
+        return AnalysisPlan(
+            objective="Analyze revenue by customer.",
+            steps=[
+                "Calculate revenue using Quantity × UnitPrice.",
+                "Group revenue by CustomerID.",
+                "Sort customers by revenue.",
+                "Return the customer-level revenue results.",
+            ],
+            tools=["revenue_by_customer"],
+        )
+
+    # ---------------------------------------------------------
+    # TOP CUSTOMERS + REVENUE
+    # ---------------------------------------------------------
+    if (
+        ("top" in question_lower or "highest" in question_lower)
+        and "customer" in question_lower
+        and "revenue" in question_lower
+    ):
+        return AnalysisPlan(
+            objective="Find the customers with the highest revenue.",
+            steps=[
+                "Calculate revenue using Quantity × UnitPrice.",
+                "Group revenue by CustomerID.",
+                "Sort customers by revenue in descending order.",
+                "Return the top customers by revenue.",
+            ],
+            tools=["top_customers_by_revenue"],
+        )
+
+    # ---------------------------------------------------------
+    # MONTH + REVENUE
+    # ---------------------------------------------------------
+    if (
+        (
+            "month" in question_lower
+            or "monthly" in question_lower
+        )
+        and "revenue" in question_lower
+    ):
+        return AnalysisPlan(
+            objective="Analyze revenue over time by month.",
             steps=[
                 "Calculate revenue using Quantity × UnitPrice.",
                 "Extract the month from InvoiceDate.",
@@ -47,9 +146,19 @@ def create_mock_analysis_plan(
             tools=["revenue_by_month"],
         )
 
-    if "year" in question_lower and "revenue" in question_lower:
+    # ---------------------------------------------------------
+    # YEAR + REVENUE
+    # ---------------------------------------------------------
+    if (
+        (
+            "year" in question_lower
+            or "yearly" in question_lower
+            or "annual" in question_lower
+        )
+        and "revenue" in question_lower
+    ):
         return AnalysisPlan(
-            objective="Analyze revenue by year.",
+            objective="Analyze revenue over time by year.",
             steps=[
                 "Calculate revenue using Quantity × UnitPrice.",
                 "Extract the year from InvoiceDate.",
@@ -59,18 +168,27 @@ def create_mock_analysis_plan(
             tools=["revenue_by_year"],
         )
 
-    if "customer" in question_lower and "revenue" in question_lower:
+    # ---------------------------------------------------------
+    # CANCELLATIONS
+    # ---------------------------------------------------------
+    if (
+        "cancel" in question_lower
+        or "cancellation" in question_lower
+        or "cancelled" in question_lower
+    ):
         return AnalysisPlan(
-            objective="Analyze revenue by customer.",
+            objective="Analyze cancelled transactions.",
             steps=[
-                "Calculate revenue using Quantity × UnitPrice.",
-                "Group revenue by CustomerID.",
-                "Sort customers by revenue in descending order.",
-                "Return the customers ranked by revenue.",
+                "Identify invoices beginning with C.",
+                "Filter cancelled transactions.",
+                "Return the cancelled transaction records.",
             ],
-            tools=["top_customers_by_revenue"],
+            tools=["cancelled_transactions"],
         )
 
+    # ---------------------------------------------------------
+    # FALLBACK
+    # ---------------------------------------------------------
     return AnalysisPlan(
         objective=question,
         steps=[

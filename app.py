@@ -1,3 +1,4 @@
+import html
 import requests
 import streamlit as st
 
@@ -30,17 +31,20 @@ st.html(
        ===================================================== */
 
     .stApp {
+
         background:
             radial-gradient(
-                circle at 10% 10%,
+                circle at 8% 8%,
                 rgba(76, 110, 245, 0.10),
                 transparent 28%
             ),
+
             radial-gradient(
-                circle at 90% 20%,
+                circle at 92% 18%,
                 rgba(139, 92, 246, 0.08),
                 transparent 30%
             ),
+
             #07090f;
 
         color: #e8edf7;
@@ -48,14 +52,17 @@ st.html(
 
 
     .block-container {
+
         max-width: 1250px;
+
         padding-top: 2rem;
+
         padding-bottom: 4rem;
     }
 
 
     /* =====================================================
-       HIDE STREAMLIT DEFAULT ELEMENTS
+       HIDE STREAMLIT DEFAULT UI
        ===================================================== */
 
     #MainMenu {
@@ -76,17 +83,23 @@ st.html(
        ===================================================== */
 
     .top-nav {
+
         display: flex;
+
         justify-content: space-between;
+
         align-items: center;
 
         padding: 14px 20px;
 
-        border: 1px solid rgba(255,255,255,0.07);
+        border:
+            1px solid rgba(255,255,255,0.07);
 
-        background: rgba(12,15,24,0.72);
+        background:
+            rgba(12,15,24,0.72);
 
-        backdrop-filter: blur(20px);
+        backdrop-filter:
+            blur(20px);
 
         border-radius: 16px;
 
@@ -95,18 +108,24 @@ st.html(
 
 
     .brand {
+
         display: flex;
+
         align-items: center;
+
         gap: 12px;
     }
 
 
     .brand-icon {
+
         width: 38px;
         height: 38px;
 
         display: flex;
+
         align-items: center;
+
         justify-content: center;
 
         border-radius: 11px;
@@ -128,23 +147,33 @@ st.html(
 
 
     .brand-name {
+
         font-size: 17px;
+
         font-weight: 700;
+
         letter-spacing: -0.3px;
+
         color: #f5f7fb;
     }
 
 
     .brand-subtitle {
+
         font-size: 11px;
+
         color: #77819a;
+
         margin-top: 2px;
     }
 
 
     .nav-status {
+
         display: flex;
+
         align-items: center;
+
         gap: 8px;
 
         font-size: 12px;
@@ -155,13 +184,16 @@ st.html(
 
         border-radius: 999px;
 
-        border: 1px solid rgba(255,255,255,0.06);
+        border:
+            1px solid rgba(255,255,255,0.06);
 
-        background: rgba(255,255,255,0.025);
+        background:
+            rgba(255,255,255,0.025);
     }
 
 
     .status-dot {
+
         width: 7px;
         height: 7px;
 
@@ -179,21 +211,26 @@ st.html(
        ===================================================== */
 
     .hero {
+
         text-align: center;
+
         margin-bottom: 50px;
     }
 
 
     .hero-badge {
+
         display: inline-block;
 
         padding: 7px 14px;
 
         border-radius: 999px;
 
-        border: 1px solid rgba(103,130,255,0.20);
+        border:
+            1px solid rgba(103,130,255,0.20);
 
-        background: rgba(79,124,255,0.07);
+        background:
+            rgba(79,124,255,0.07);
 
         color: #8da7ff;
 
@@ -208,7 +245,9 @@ st.html(
 
 
     .hero h1 {
-        font-size: clamp(42px, 6vw, 72px);
+
+        font-size:
+            clamp(42px, 6vw, 72px);
 
         line-height: 1.02;
 
@@ -227,11 +266,13 @@ st.html(
             );
 
         -webkit-background-clip: text;
+
         -webkit-text-fill-color: transparent;
     }
 
 
     .hero-description {
+
         max-width: 650px;
 
         margin: 22px auto 0;
@@ -249,6 +290,7 @@ st.html(
        ===================================================== */
 
     .section-label {
+
         color: #707b94;
 
         font-size: 11px;
@@ -264,73 +306,137 @@ st.html(
 
 
     /* =====================================================
-       GLASS CARD
+       DATASET CARD
        ===================================================== */
 
-    .glass-card {
+    .dataset-card {
+
         background:
             linear-gradient(
                 145deg,
                 rgba(255,255,255,0.045),
-                rgba(255,255,255,0.018)
+                rgba(255,255,255,0.015)
             );
 
-        border: 1px solid rgba(255,255,255,0.075);
+        border:
+            1px solid rgba(255,255,255,0.075);
 
         border-radius: 20px;
 
-        padding: 25px;
+        padding: 24px;
 
         box-shadow:
-            0 20px 70px rgba(0,0,0,0.22);
+            0 20px 70px rgba(0,0,0,0.20);
 
-        backdrop-filter: blur(20px);
+        backdrop-filter:
+            blur(20px);
     }
 
 
-    /* =====================================================
-       UPLOAD
-       ===================================================== */
+    .dataset-card-header {
 
-    .upload-header {
         display: flex;
+
         align-items: center;
-        gap: 12px;
-        margin-bottom: 15px;
+
+        gap: 14px;
+
+        margin-bottom: 20px;
     }
 
 
-    .upload-icon {
-        width: 40px;
-        height: 40px;
+    .dataset-icon {
+
+        width: 44px;
+        height: 44px;
 
         display: flex;
+
         align-items: center;
+
         justify-content: center;
 
-        border-radius: 12px;
+        border-radius: 13px;
 
-        background: rgba(79,124,255,0.10);
+        background:
+            linear-gradient(
+                135deg,
+                rgba(79,124,255,0.16),
+                rgba(139,92,246,0.12)
+            );
 
-        border: 1px solid rgba(79,124,255,0.18);
+        border:
+            1px solid rgba(100,130,255,0.18);
 
-        color: #8da7ff;
+        color: #9db0ff;
 
-        font-size: 18px;
+        font-size: 20px;
     }
 
 
-    .upload-title {
-        font-size: 16px;
+    .dataset-title {
+
+        color: #f2f4f9;
+
+        font-size: 17px;
+
         font-weight: 700;
-        color: #f0f3f9;
+
+        letter-spacing: -0.2px;
     }
 
 
-    .upload-description {
-        color: #77819a;
-        font-size: 13px;
-        margin-top: 3px;
+    .dataset-subtitle {
+
+        color: #737e96;
+
+        font-size: 12px;
+
+        margin-top: 4px;
+    }
+
+
+    .dataset-supported {
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 7px;
+
+        flex-wrap: wrap;
+    }
+
+
+    .format-pill {
+
+        padding: 5px 9px;
+
+        border-radius: 7px;
+
+        background:
+            rgba(79,124,255,0.07);
+
+        border:
+            1px solid rgba(79,124,255,0.13);
+
+        color: #91a6ff;
+
+        font-family: monospace;
+
+        font-size: 10px;
+
+        font-weight: 600;
+    }
+
+
+    .dataset-note {
+
+        color: #59647a;
+
+        font-size: 10px;
+
+        margin-left: 6px;
     }
 
 
@@ -339,6 +445,7 @@ st.html(
        ===================================================== */
 
     [data-testid="stFileUploader"] {
+
         margin-top: 10px;
     }
 
@@ -356,7 +463,8 @@ st.html(
 
         padding: 10px;
 
-        transition: 0.25s ease;
+        transition:
+            0.25s ease;
     }
 
 
@@ -367,6 +475,105 @@ st.html(
 
         background:
             rgba(79,124,255,0.035);
+    }
+
+
+    /* =====================================================
+       FILE STATUS
+       ===================================================== */
+
+    .file-status {
+
+        display: flex;
+
+        justify-content: space-between;
+
+        align-items: center;
+
+        margin-top: 12px;
+
+        padding: 13px 16px;
+
+        border-radius: 13px;
+
+        background:
+            rgba(69,230,161,0.035);
+
+        border:
+            1px solid rgba(69,230,161,0.12);
+    }
+
+
+    .file-status-left {
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 11px;
+    }
+
+
+    .file-check {
+
+        width: 28px;
+        height: 28px;
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        border-radius: 8px;
+
+        background:
+            rgba(69,230,161,0.10);
+
+        color: #6debb1;
+
+        font-size: 13px;
+
+        font-weight: 700;
+    }
+
+
+    .file-name {
+
+        color: #dce4ef;
+
+        font-size: 12px;
+
+        font-weight: 600;
+    }
+
+
+    .file-meta {
+
+        color: #5f6b81;
+
+        font-size: 10px;
+
+        margin-top: 3px;
+    }
+
+
+    .file-ready {
+
+        padding: 5px 8px;
+
+        border-radius: 6px;
+
+        background:
+            rgba(69,230,161,0.07);
+
+        color: #65dca5;
+
+        font-size: 9px;
+
+        font-weight: 800;
+
+        letter-spacing: 1px;
     }
 
 
@@ -382,7 +589,8 @@ st.html(
 
         border-radius: 12px;
 
-        border: 1px solid rgba(120,140,255,0.30);
+        border:
+            1px solid rgba(120,140,255,0.30);
 
         background:
             linear-gradient(
@@ -408,10 +616,151 @@ st.html(
 
     .stButton > button:hover {
 
-        transform: translateY(-2px);
+        transform:
+            translateY(-2px);
 
         box-shadow:
             0 15px 40px rgba(79,90,210,0.32);
+
+        border-color:
+            rgba(150,165,255,0.55);
+    }
+
+
+    /* =====================================================
+       SUGGESTION BUTTONS
+       ===================================================== */
+
+    .suggestion-label {
+
+        color: #58637a;
+
+        font-size: 9px;
+
+        font-weight: 800;
+
+        letter-spacing: 1.4px;
+
+        margin-bottom: 8px;
+    }
+
+
+    .suggestion-label + div button {
+
+        background:
+            rgba(255,255,255,0.025) !important;
+
+        border:
+            1px solid rgba(255,255,255,0.065) !important;
+
+        color: #9ba6bb !important;
+
+        font-size: 11px !important;
+
+        font-weight: 500 !important;
+
+        min-height: 40px !important;
+
+        box-shadow: none !important;
+
+        transition:
+            all 0.2s ease !important;
+    }
+
+
+    .suggestion-label + div button:hover {
+
+        background:
+            rgba(79,124,255,0.07) !important;
+
+        border-color:
+            rgba(100,130,255,0.25) !important;
+
+        color:
+            #b4c2ff !important;
+
+        transform:
+            translateY(-1px) !important;
+    }
+
+
+    /* =====================================================
+       QUERY COMPOSER
+       ===================================================== */
+
+    .query-intro {
+
+        margin-bottom: 20px;
+    }
+
+
+    .query-title {
+
+        color: #eef2f8;
+
+        font-size: 21px;
+
+        font-weight: 700;
+
+        letter-spacing: -0.4px;
+    }
+
+
+    .query-subtitle {
+
+        color: #6f7a91;
+
+        font-size: 12px;
+
+        margin-top: 6px;
+
+        line-height: 1.6;
+    }
+
+
+    .query-hint {
+
+        margin-top: 8px;
+
+        color: #515d74;
+
+        font-size: 10px;
+    }
+
+
+    .query-hint span:first-child {
+
+        display: inline-flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        width: 17px;
+        height: 17px;
+
+        margin-right: 5px;
+
+        border-radius: 5px;
+
+        background:
+            rgba(255,255,255,0.05);
+
+        border:
+            1px solid rgba(255,255,255,0.06);
+
+        color: #7c879c;
+
+        font-size: 9px;
+    }
+
+
+    .hint-separator {
+
+        margin:
+            0 6px;
+
+        color: #343d50;
     }
 
 
@@ -451,7 +800,7 @@ st.html(
 
 
     /* =====================================================
-       METRICS
+       METRIC CARDS
        ===================================================== */
 
     [data-testid="stMetric"] {
@@ -493,7 +842,159 @@ st.html(
 
 
     /* =====================================================
-       RESULT
+       AGENT PIPELINE
+       ===================================================== */
+
+    .agent-panel {
+
+        background:
+            linear-gradient(
+                145deg,
+                rgba(255,255,255,0.035),
+                rgba(255,255,255,0.012)
+            );
+
+        border:
+            1px solid rgba(255,255,255,0.065);
+
+        border-radius: 20px;
+
+        padding: 24px;
+
+        margin-top: 5px;
+    }
+
+
+    .agent-panel-header {
+
+        display: flex;
+
+        justify-content: space-between;
+
+        align-items: center;
+
+        margin-bottom: 22px;
+    }
+
+
+    .agent-panel-title {
+
+        color: #e8edf7;
+
+        font-size: 13px;
+
+        font-weight: 700;
+    }
+
+
+    .agent-panel-status {
+
+        color: #63dda5;
+
+        font-size: 10px;
+
+        font-weight: 700;
+
+        letter-spacing: 0.8px;
+    }
+
+
+    .agent-pipeline {
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 8px;
+    }
+
+
+    .agent-step {
+
+        flex: 1;
+
+        min-height: 78px;
+
+        display: flex;
+
+        flex-direction: column;
+
+        justify-content: center;
+
+        padding: 13px;
+
+        border-radius: 13px;
+
+        background:
+            rgba(255,255,255,0.025);
+
+        border:
+            1px solid rgba(255,255,255,0.055);
+    }
+
+
+    .agent-step.active {
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(79,124,255,0.10),
+                rgba(139,92,246,0.07)
+            );
+
+        border-color:
+            rgba(100,130,255,0.20);
+    }
+
+
+    .agent-step-number {
+
+        color: #67728a;
+
+        font-size: 9px;
+
+        font-weight: 800;
+
+        letter-spacing: 1px;
+
+        margin-bottom: 6px;
+    }
+
+
+    .agent-step-title {
+
+        color: #cbd4e4;
+
+        font-size: 11px;
+
+        font-weight: 650;
+    }
+
+
+    .agent-step-description {
+
+        color: #606b82;
+
+        font-size: 9px;
+
+        margin-top: 4px;
+
+        line-height: 1.4;
+    }
+
+
+    .agent-arrow {
+
+        color: #414b61;
+
+        font-size: 14px;
+
+        flex-shrink: 0;
+    }
+
+
+    /* =====================================================
+       RESULT CARD
        ===================================================== */
 
     .result-card {
@@ -501,19 +1002,18 @@ st.html(
         background:
             linear-gradient(
                 145deg,
-                rgba(79,124,255,0.075),
-                rgba(139,92,246,0.035)
+                rgba(79,124,255,0.085),
+                rgba(139,92,246,0.045)
             );
 
         border:
-            1px solid
-            rgba(100,130,255,0.18);
+            1px solid rgba(100,130,255,0.20);
 
         border-radius: 20px;
 
-        padding: 26px;
+        padding: 28px;
 
-        margin-top: 10px;
+        margin-top: 15px;
 
         box-shadow:
             0 20px 60px rgba(0,0,0,0.18);
@@ -593,11 +1093,13 @@ st.html(
         padding: 20px;
 
         margin-top: 20px;
+
+        overflow: hidden;
     }
 
 
     /* =====================================================
-       EXPANDER
+       ANALYSIS PLAN
        ===================================================== */
 
     [data-testid="stExpander"] {
@@ -634,7 +1136,39 @@ st.html(
 
 
     .footer strong {
+
         color: #79839b;
+    }
+
+
+    /* =====================================================
+       RESPONSIVE
+       ===================================================== */
+
+    @media (max-width: 800px) {
+
+        .agent-pipeline {
+
+            flex-direction: column;
+
+            align-items: stretch;
+        }
+
+
+        .agent-arrow {
+
+            text-align: center;
+
+            transform:
+                rotate(90deg);
+        }
+
+
+        .nav-status {
+
+            display: none;
+        }
+
     }
 
     </style>
@@ -669,6 +1203,7 @@ st.html(
             </div>
 
         </div>
+
 
         <div class="nav-status">
 
@@ -725,25 +1260,40 @@ st.markdown(
 
 st.html(
     """
-    <div class="glass-card">
+    <div class="dataset-card">
 
-        <div class="upload-header">
+        <div class="dataset-card-header">
 
-            <div class="upload-icon">
-                ↑
+            <div class="dataset-icon">
+                ↥
             </div>
 
             <div>
 
-                <div class="upload-title">
-                    Load your dataset
+                <div class="dataset-title">
+                    Bring your data
                 </div>
 
-                <div class="upload-description">
-                    CSV or Excel files supported
+                <div class="dataset-subtitle">
+                    Upload a CSV or Excel dataset to begin analysis
                 </div>
 
             </div>
+
+        </div>
+
+
+        <div class="dataset-supported">
+
+            <span class="format-pill">CSV</span>
+
+            <span class="format-pill">XLSX</span>
+
+            <span class="format-pill">XLS</span>
+
+            <span class="dataset-note">
+                Your dataset is processed locally by the application.
+            </span>
 
         </div>
 
@@ -760,34 +1310,60 @@ uploaded_file = st.file_uploader(
 
 
 # =========================================================
-# DATASET SELECTED
+# FILE STATUS
 # =========================================================
 
 if uploaded_file is not None:
 
+    file_size_mb = (
+        len(uploaded_file.getvalue())
+        / (1024 * 1024)
+    )
+
+
     st.html(
         f"""
-        <div style="
-            margin-top:12px;
-            padding:12px 15px;
-            border-radius:12px;
-            background:rgba(69,230,161,0.045);
-            border:1px solid rgba(69,230,161,0.12);
-            color:#8de8bd;
-            font-size:13px;
-        ">
-            ✓ Dataset loaded&nbsp;&nbsp;·&nbsp;&nbsp;
-            <strong>{uploaded_file.name}</strong>
+        <div class="file-status">
+
+            <div class="file-status-left">
+
+                <div class="file-check">
+                    ✓
+                </div>
+
+                <div>
+
+                    <div class="file-name">
+                        {html.escape(uploaded_file.name)}
+                    </div>
+
+                    <div class="file-meta">
+                        {file_size_mb:.2f} MB
+                        &nbsp;·&nbsp;
+                        {html.escape(uploaded_file.type or "Dataset")}
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="file-ready">
+                READY
+            </div>
+
         </div>
         """
     )
 
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(
+        "<div style='height:10px'></div>",
+        unsafe_allow_html=True,
+    )
 
 
     if st.button(
-        "◉  Profile Dataset",
+        "◉  Inspect Dataset",
         key="profile_button",
     ):
 
@@ -799,10 +1375,11 @@ if uploaded_file is not None:
             )
         }
 
+
         try:
 
             with st.spinner(
-                "Profiling dataset..."
+                "Inspecting your dataset..."
             ):
 
                 response = requests.post(
@@ -818,8 +1395,9 @@ if uploaded_file is not None:
 
                 profile = profile_data["profile"]
 
+
                 st.success(
-                    "Dataset successfully profiled."
+                    "Dataset inspection completed."
                 )
 
 
@@ -888,7 +1466,8 @@ if uploaded_file is not None:
             else:
 
                 st.error(
-                    f"Profiling failed: {response.text}"
+                    f"Dataset inspection failed: "
+                    f"{response.text}"
                 )
 
 
@@ -904,11 +1483,11 @@ if uploaded_file is not None:
 
 
 # =========================================================
-# QUESTION
+# QUESTION COMPOSER
 # =========================================================
 
 st.markdown(
-    "<br>",
+    "<div style='height:35px'></div>",
     unsafe_allow_html=True,
 )
 
@@ -919,10 +1498,90 @@ st.markdown(
 )
 
 
+st.html(
+    """
+    <div class="query-intro">
+
+        <div class="query-title">
+            What would you like to discover?
+        </div>
+
+        <div class="query-subtitle">
+            Ask a question in natural language.
+            AIDA will select the appropriate analysis tool.
+        </div>
+
+    </div>
+    """
+)
+
+
+# =========================================================
+# SUGGESTED QUESTIONS
+# =========================================================
+
+if "suggested_question" not in st.session_state:
+
+    st.session_state.suggested_question = ""
+
+
+st.html(
+    """
+    <div class="suggestion-label">
+        TRY ASKING
+    </div>
+    """
+)
+
+
+suggestion_col1, suggestion_col2, suggestion_col3 = st.columns(3)
+
+
+with suggestion_col1:
+
+    if st.button(
+        "Highest revenue by country",
+        key="suggest_country",
+    ):
+
+        st.session_state.suggested_question = (
+            "Which country generated the highest revenue?"
+        )
+
+
+with suggestion_col2:
+
+    if st.button(
+        "Top products by revenue",
+        key="suggest_product",
+    ):
+
+        st.session_state.suggested_question = (
+            "Which products generated the highest revenue?"
+        )
+
+
+with suggestion_col3:
+
+    if st.button(
+        "Monthly revenue",
+        key="suggest_month",
+    ):
+
+        st.session_state.suggested_question = (
+            "Show me the monthly revenue."
+        )
+
+
+# =========================================================
+# QUESTION INPUT
+# =========================================================
+
 question = st.text_input(
     "Natural language query",
+    value=st.session_state.suggested_question,
     placeholder=(
-        "e.g. Which country generated the highest revenue?"
+        "Ask anything about your dataset..."
     ),
     label_visibility="collapsed",
 )
@@ -930,20 +1589,23 @@ question = st.text_input(
 
 st.html(
     """
-    <div style="
-        margin-top:8px;
-        color:#5f6980;
-        font-size:11px;
-    ">
-        Ask questions about revenue, products, countries,
-        customers, trends, and more.
+    <div class="query-hint">
+
+        <span>↵</span>
+
+        Natural language supported
+
+        <span class="hint-separator">•</span>
+
+        Revenue · Products · Countries · Customers · Trends
+
     </div>
     """
 )
 
 
 st.markdown(
-    "<br>",
+    "<div style='height:12px'></div>",
     unsafe_allow_html=True,
 )
 
@@ -982,6 +1644,7 @@ if analyze_button:
             )
         }
 
+
         data = {
             "question": question,
         }
@@ -1006,6 +1669,10 @@ if analyze_button:
                 result = response.json()
 
 
+                # =================================================
+                # INTELLIGENCE SECTION
+                # =================================================
+
                 st.markdown(
                     "<br>",
                     unsafe_allow_html=True,
@@ -1019,8 +1686,151 @@ if analyze_button:
 
 
                 # =================================================
+                # AGENT PIPELINE
+                # =================================================
+
+                tools_used = result.get(
+                    "tools_used",
+                    [],
+                )
+
+
+                selected_tool = (
+                    tools_used[0]
+                    if tools_used
+                    else "data_profiler"
+                )
+
+
+                st.html(
+                    f"""
+                    <div class="agent-panel">
+
+                        <div class="agent-panel-header">
+
+                            <div class="agent-panel-title">
+                                AIDA Agent Pipeline
+                            </div>
+
+                            <div class="agent-panel-status">
+                                ANALYSIS COMPLETE
+                            </div>
+
+                        </div>
+
+
+                        <div class="agent-pipeline">
+
+
+                            <div class="agent-step active">
+
+                                <div class="agent-step-number">
+                                    01
+                                </div>
+
+                                <div class="agent-step-title">
+                                    Understand
+                                </div>
+
+                                <div class="agent-step-description">
+                                    Interprets your question
+                                </div>
+
+                            </div>
+
+
+                            <div class="agent-arrow">
+                                →
+                            </div>
+
+
+                            <div class="agent-step active">
+
+                                <div class="agent-step-number">
+                                    02
+                                </div>
+
+                                <div class="agent-step-title">
+                                    Select Tool
+                                </div>
+
+                                <div class="agent-step-description">
+                                    Chooses {html.escape(selected_tool)}
+                                </div>
+
+                            </div>
+
+
+                            <div class="agent-arrow">
+                                →
+                            </div>
+
+
+                            <div class="agent-step active">
+
+                                <div class="agent-step-number">
+                                    03
+                                </div>
+
+                                <div class="agent-step-title">
+                                    Analyze
+                                </div>
+
+                                <div class="agent-step-description">
+                                    Executes data analysis
+                                </div>
+
+                            </div>
+
+
+                            <div class="agent-arrow">
+                                →
+                            </div>
+
+
+                            <div class="agent-step active">
+
+                                <div class="agent-step-number">
+                                    04
+                                </div>
+
+                                <div class="agent-step-title">
+                                    Insight
+                                </div>
+
+                                <div class="agent-step-description">
+                                    Generates final result
+                                </div>
+
+                            </div>
+
+
+                        </div>
+
+                    </div>
+                    """
+                )
+
+
+                st.markdown(
+                    "<div style='height:22px'></div>",
+                    unsafe_allow_html=True,
+                )
+
+
+                # =================================================
                 # AI INSIGHT
                 # =================================================
+
+                answer = html.escape(
+                    str(
+                        result.get(
+                            "answer",
+                            "No answer generated.",
+                        )
+                    )
+                )
+
 
                 st.html(
                     f"""
@@ -1031,7 +1841,7 @@ if analyze_button:
                         </div>
 
                         <div class="result-text">
-                            {result["answer"]}
+                            {answer}
                         </div>
 
                     </div>
@@ -1040,7 +1850,7 @@ if analyze_button:
 
 
                 st.markdown(
-                    "<br>",
+                    "<div style='height:20px'></div>",
                     unsafe_allow_html=True,
                 )
 
@@ -1083,16 +1893,16 @@ if analyze_button:
 
                     st.metric(
                         "Tools",
-                        len(result["tools_used"]),
+                        len(tools_used),
                     )
 
 
                 # =================================================
-                # AGENT ACTIVITY
+                # AGENT TOOLS
                 # =================================================
 
                 st.markdown(
-                    "<br>",
+                    "<div style='height:22px'></div>",
                     unsafe_allow_html=True,
                 )
 
@@ -1106,18 +1916,23 @@ if analyze_button:
                 tool_html = ""
 
 
-                for tool in result["tools_used"]:
+                for tool in tools_used:
+
+                    safe_tool = html.escape(
+                        str(tool)
+                    )
+
 
                     tool_html += (
                         f'<span class="tool-badge">'
-                        f'✓ {tool}'
+                        f'✓ {safe_tool}'
                         f'</span>'
                     )
 
 
                 st.html(
                     f"""
-                    <div class="glass-card">
+                    <div class="dataset-card">
 
                         <div style="
                             color:#a8b2c8;
@@ -1141,7 +1956,7 @@ if analyze_button:
                 if result.get("chart_url"):
 
                     st.markdown(
-                        "<br>",
+                        "<div style='height:22px'></div>",
                         unsafe_allow_html=True,
                     )
 
@@ -1183,7 +1998,7 @@ if analyze_button:
                 # =================================================
 
                 st.markdown(
-                    "<br>",
+                    "<div style='height:22px'></div>",
                     unsafe_allow_html=True,
                 )
 
@@ -1194,9 +2009,18 @@ if analyze_button:
                 )
 
 
+                safe_filename = html.escape(
+                    str(
+                        dataset_info[
+                            "file_name"
+                        ]
+                    )
+                )
+
+
                 st.html(
                     f"""
-                    <div class="glass-card">
+                    <div class="dataset-card">
 
                         <div style="
                             color:#f0f3f9;
@@ -1204,16 +2028,16 @@ if analyze_button:
                             font-weight:650;
                             margin-bottom:8px;
                         ">
-                            {dataset_info["file_name"]}
+                            {safe_filename}
                         </div>
 
                         <div style="
                             color:#737e96;
                             font-size:12px;
                         ">
-                            {dataset_info["rows"]:,} rows
+                            {dataset_info['rows']:,} rows
                             &nbsp;·&nbsp;
-                            {dataset_info["columns"]} columns
+                            {dataset_info['columns']} columns
                         </div>
 
                     </div>
@@ -1226,13 +2050,13 @@ if analyze_button:
                 # =================================================
 
                 st.markdown(
-                    "<br>",
+                    "<div style='height:22px'></div>",
                     unsafe_allow_html=True,
                 )
 
 
                 with st.expander(
-                    "⌁  View agent reasoning plan"
+                    "⌁  View agent execution plan"
                 ):
 
                     plan = result["plan"]
@@ -1241,6 +2065,7 @@ if analyze_button:
                     st.markdown(
                         "**Objective**"
                     )
+
 
                     st.write(
                         plan["objective"]

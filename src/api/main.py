@@ -1,20 +1,14 @@
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from uuid import uuid4
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from src.agent.chart_router import generate_chart_for_tool
 from src.agent.executor import AgentExecutor
 from src.agent.mock_llm import create_mock_analysis_plan
 from src.agent.tools import create_tool_registry
-from src.tools.chart_generator import (
-    plot_monthly_revenue,
-    plot_revenue_by_country,
-    plot_revenue_distribution,
-    plot_top_products,
-)
 from src.tools.data_loader import load_data
 
 
@@ -26,10 +20,12 @@ app = FastAPI(
 
 
 CHART_DIRECTORY = Path("data/outputs/charts")
+
 CHART_DIRECTORY.mkdir(
     parents=True,
     exist_ok=True,
 )
+
 
 app.mount(
     "/charts",
@@ -41,6 +37,7 @@ app.mount(
 @app.get("/")
 def root() -> dict[str, str]:
     """Return basic API information."""
+
     return {
         "message": "Autonomous AI Data Analyst API is running.",
         "status": "success",
@@ -50,6 +47,7 @@ def root() -> dict[str, str]:
 @app.get("/health")
 def health_check() -> dict[str, str]:
     """Check whether the backend is running."""
+
     return {
         "status": "healthy",
     }
@@ -101,7 +99,10 @@ async def profile_dataset(
         )
 
         registry = create_tool_registry()
-        executor = AgentExecutor(registry)
+
+        executor = AgentExecutor(
+            registry
+        )
 
         profile = executor.profile_dataset(
             dataset
@@ -180,11 +181,23 @@ async def analyze_dataset(
             temporary_file_path
         )
 
+        # --------------------------------------------------
+        # CREATE TOOL REGISTRY
+        # --------------------------------------------------
+
         registry = create_tool_registry()
+
+        # --------------------------------------------------
+        # CREATE ANALYSIS PLAN
+        # --------------------------------------------------
 
         planner = create_mock_analysis_plan(
             question
         )
+
+        # --------------------------------------------------
+        # EXECUTE ANALYSIS
+        # --------------------------------------------------
 
         executor = AgentExecutor(
             registry
@@ -200,49 +213,24 @@ async def analyze_dataset(
             results,
         )
 
+        # --------------------------------------------------
+        # AUTOMATIC CHART GENERATION
+        # --------------------------------------------------
+
         chart_url = None
 
         if planner.tools:
+
             selected_tool = planner.tools[0]
 
-            chart_filename = (
-                f"{uuid4().hex}.png"
+            chart_url = generate_chart_for_tool(
+                selected_tool,
+                dataset,
             )
 
-            chart_path = (
-                CHART_DIRECTORY
-                / chart_filename
-            )
-
-            if selected_tool == "revenue_by_country":
-                plot_revenue_by_country(
-                    dataset,
-                    str(chart_path),
-                )
-                chart_url = (
-                    f"/charts/{chart_filename}"
-                )
-
-            elif selected_tool == "top_products_by_revenue":
-                plot_top_products(
-                    dataset,
-                    str(chart_path),
-                )
-                chart_url = (
-                    f"/charts/{chart_filename}"
-                )
-
-            elif selected_tool == "revenue_by_month":
-                plot_monthly_revenue(
-                    dataset,
-                    str(chart_path),
-                )
-                chart_url = (
-                    f"/charts/{chart_filename}"
-                )
-
-            elif selected_tool == "data_profiler":
-                chart_url = None
+        # --------------------------------------------------
+        # RETURN RESPONSE
+        # --------------------------------------------------
 
         return {
             "status": response.status,
