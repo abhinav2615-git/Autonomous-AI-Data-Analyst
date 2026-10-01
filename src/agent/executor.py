@@ -15,7 +15,10 @@ from src.models.agent import (
 class AgentExecutor:
     """Execute analysis plans using registered tools."""
 
-    def __init__(self, registry: ToolRegistry) -> None:
+    def __init__(
+        self,
+        registry: ToolRegistry,
+    ) -> None:
         self.registry = registry
         self.verifier = ResultVerifier()
 
@@ -24,7 +27,11 @@ class AgentExecutor:
         df: pd.DataFrame,
     ) -> dict:
         """Profile the uploaded dataset."""
-        profiler = self.registry.get("data_profiler")
+
+        profiler = self.registry.get(
+            "data_profiler"
+        )
+
         return profiler(df)
 
     def execute_step(
@@ -33,23 +40,35 @@ class AgentExecutor:
         df: pd.DataFrame,
     ) -> Any:
         """Execute one analysis step."""
-        tool = self.registry.get(tool_name)
+
+        tool = self.registry.get(
+            tool_name
+        )
+
         return tool(df)
 
     def execute_plan(
         self,
         plan: AnalysisPlan,
         df: pd.DataFrame,
-    ) -> tuple[dict[str, Any], list[ExecutionStep]]:
+    ) -> tuple[
+        dict[str, Any],
+        list[ExecutionStep],
+    ]:
         """
-        Execute and verify every tool in the analysis plan.
+        Execute and verify every tool in the
+        analysis plan.
 
-        Each tool is executed independently. Its result is
-        verified before being accepted for interpretation.
+        Each tool is executed independently.
+        Its result is verified before being
+        accepted for interpretation.
         """
 
         results: dict[str, Any] = {}
-        execution_steps: list[ExecutionStep] = []
+
+        execution_steps: list[
+            ExecutionStep
+        ] = []
 
         for step_number, tool_name in enumerate(
             plan.tools,
@@ -72,11 +91,14 @@ class AgentExecutor:
                 )
 
                 if not verification["valid"]:
-                    error_message = verification["reason"]
+                    error_message = (
+                        verification["reason"]
+                    )
 
                     print(
-                        f"Verification failed: "
-                        f"{tool_name} -> {error_message}"
+                        "Verification failed: "
+                        f"{tool_name} -> "
+                        f"{error_message}"
                     )
 
                     results[tool_name] = {
@@ -97,7 +119,7 @@ class AgentExecutor:
                 results[tool_name] = result
 
                 print(
-                    f"Verification passed: "
+                    "Verification passed: "
                     f"{tool_name}"
                 )
 
@@ -114,7 +136,8 @@ class AgentExecutor:
 
                 print(
                     f"Step {step_number} failed: "
-                    f"{tool_name} -> {error_message}"
+                    f"{tool_name} -> "
+                    f"{error_message}"
                 )
 
                 results[tool_name] = {
@@ -130,7 +153,10 @@ class AgentExecutor:
                     )
                 )
 
-        return results, execution_steps
+        return (
+            results,
+            execution_steps,
+        )
 
     def interpret_results(
         self,
@@ -166,6 +192,36 @@ class AgentExecutor:
 
         return interpretations
 
+    def calculate_confidence(
+        self,
+        execution_steps: list[ExecutionStep],
+    ) -> float:
+        """
+        Calculate execution confidence based on
+        successful tool verification.
+
+        This is execution confidence, not statistical
+        confidence or model certainty.
+        """
+
+        if not execution_steps:
+            return 0.0
+
+        successful_steps = sum(
+            1
+            for step in execution_steps
+            if step.success
+        )
+
+        total_steps = len(
+            execution_steps
+        )
+
+        return round(
+            successful_steps / total_steps,
+            2,
+        )
+
     def create_response(
         self,
         plan: AnalysisPlan,
@@ -174,10 +230,17 @@ class AgentExecutor:
     ) -> AgentResponse:
         """Create the final agent response."""
 
+        confidence = self.calculate_confidence(
+            execution_steps
+        )
+
         if not results:
             return AgentResponse(
-                answer="No analysis results were generated.",
-                confidence=0.0,
+                answer=(
+                    "No analysis results "
+                    "were generated."
+                ),
+                confidence=confidence,
                 tools_used=[],
                 execution_steps=execution_steps,
                 status="failed",
@@ -207,7 +270,7 @@ class AgentExecutor:
                     "were available to generate "
                     "an answer."
                 ),
-                confidence=0.0,
+                confidence=confidence,
                 tools_used=successful_tools,
                 execution_steps=execution_steps,
                 status="failed",
@@ -224,8 +287,10 @@ class AgentExecutor:
             )
 
         return AgentResponse(
-            answer="\n\n".join(answer_parts),
-            confidence=0.95,
+            answer="\n\n".join(
+                answer_parts
+            ),
+            confidence=confidence,
             tools_used=successful_tools,
             execution_steps=execution_steps,
             status="success",
