@@ -3,6 +3,7 @@ from typing import Any
 import pandas as pd
 
 from src.agent.result_interpreter import interpret_result
+from src.agent.result_verifier import ResultVerifier
 from src.agent.tool_registry import ToolRegistry
 from src.models.agent import (
     AgentResponse,
@@ -16,8 +17,12 @@ class AgentExecutor:
 
     def __init__(self, registry: ToolRegistry) -> None:
         self.registry = registry
+        self.verifier = ResultVerifier()
 
-    def profile_dataset(self, df: pd.DataFrame) -> dict:
+    def profile_dataset(
+        self,
+        df: pd.DataFrame,
+    ) -> dict:
         """Profile the uploaded dataset."""
         profiler = self.registry.get("data_profiler")
         return profiler(df)
@@ -37,17 +42,10 @@ class AgentExecutor:
         df: pd.DataFrame,
     ) -> tuple[dict[str, Any], list[ExecutionStep]]:
         """
-        Execute every tool in the analysis plan.
+        Execute and verify every tool in the analysis plan.
 
-        Each tool is executed independently.
-
-        Returns:
-            results:
-                Tool results indexed by tool name.
-
-            execution_steps:
-                Structured metadata describing each
-                execution step.
+        Each tool is executed independently. Its result is
+        verified before being accepted for interpretation.
         """
 
         results: dict[str, Any] = {}
@@ -68,7 +66,40 @@ class AgentExecutor:
                     df,
                 )
 
+                verification = self.verifier.verify(
+                    tool_name,
+                    result,
+                )
+
+                if not verification["valid"]:
+                    error_message = verification["reason"]
+
+                    print(
+                        f"Verification failed: "
+                        f"{tool_name} -> {error_message}"
+                    )
+
+                    results[tool_name] = {
+                        "error": error_message,
+                    }
+
+                    execution_steps.append(
+                        ExecutionStep(
+                            step_number=step_number,
+                            tool_name=tool_name,
+                            success=False,
+                            error=error_message,
+                        )
+                    )
+
+                    continue
+
                 results[tool_name] = result
+
+                print(
+                    f"Verification passed: "
+                    f"{tool_name}"
+                )
 
                 execution_steps.append(
                     ExecutionStep(
@@ -106,11 +137,12 @@ class AgentExecutor:
         plan: AnalysisPlan,
         results: dict[str, Any],
     ) -> list[str]:
-        """Interpret all successful tool results."""
+        """Interpret verified tool results."""
 
         interpretations: list[str] = []
 
         for tool_name in plan.tools:
+
             if tool_name not in results:
                 continue
 
@@ -171,9 +203,9 @@ class AgentExecutor:
         if not interpretations:
             return AgentResponse(
                 answer=(
-                    "The analysis was completed, "
-                    "but no interpretable results "
-                    "were generated."
+                    "No verified analysis results "
+                    "were available to generate "
+                    "an answer."
                 ),
                 confidence=0.0,
                 tools_used=successful_tools,
@@ -186,7 +218,7 @@ class AgentExecutor:
         if failed_tools:
             answer_parts.append(
                 "The following analysis steps "
-                "could not be completed: "
+                "could not be verified or completed: "
                 + ", ".join(failed_tools)
                 + "."
             )
