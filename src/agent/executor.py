@@ -4,79 +4,123 @@ import pandas as pd
 
 from src.agent.result_interpreter import interpret_result
 from src.agent.tool_registry import ToolRegistry
-from src.models.agent import AgentResponse, AnalysisPlan
+from src.models.agent import (
+    AgentResponse,
+    AnalysisPlan,
+    ExecutionStep,
+)
 
 
 class AgentExecutor:
-    """Execute tools selected by the AI agent."""
+    """Execute analysis plans using registered tools."""
 
-    def __init__(
-        self,
-        registry: ToolRegistry,
-    ) -> None:
+    def __init__(self, registry: ToolRegistry) -> None:
         self.registry = registry
 
-    def profile_dataset(
+    def profile_dataset(self, df: pd.DataFrame) -> dict:
+        """Profile the uploaded dataset."""
+        profiler = self.registry.get("data_profiler")
+        return profiler(df)
+
+    def execute_step(
         self,
+        tool_name: str,
         df: pd.DataFrame,
-    ) -> dict[str, Any]:
-        """Profile the dataset before analysis."""
-
-        profiler = self.registry.get(
-            "data_profiler"
-        )
-
-        profile = profiler(df)
-
-        return profile
+    ) -> Any:
+        """Execute one analysis step."""
+        tool = self.registry.get(tool_name)
+        return tool(df)
 
     def execute_plan(
         self,
         plan: AnalysisPlan,
         df: pd.DataFrame,
-    ) -> dict[str, Any]:
-        """Execute all tools listed in the analysis plan."""
+    ) -> tuple[dict[str, Any], list[ExecutionStep]]:
+        """
+        Execute every tool in the analysis plan.
+
+        Each tool is executed independently.
+
+        Returns:
+            results:
+                Tool results indexed by tool name.
+
+            execution_steps:
+                Structured metadata describing each
+                execution step.
+        """
 
         results: dict[str, Any] = {}
+        execution_steps: list[ExecutionStep] = []
 
-        for tool_name in plan.tools:
-
-            tool = self.registry.get(
-                tool_name
+        for step_number, tool_name in enumerate(
+            plan.tools,
+            start=1,
+        ):
+            print(
+                f"Executing step {step_number}: "
+                f"{tool_name}"
             )
 
-            result = tool(df)
+            try:
+                result = self.execute_step(
+                    tool_name,
+                    df,
+                )
 
-            results[tool_name] = result
+                results[tool_name] = result
 
-        return results
+                execution_steps.append(
+                    ExecutionStep(
+                        step_number=step_number,
+                        tool_name=tool_name,
+                        success=True,
+                    )
+                )
 
-    def create_response(
+            except Exception as error:
+                error_message = str(error)
+
+                print(
+                    f"Step {step_number} failed: "
+                    f"{tool_name} -> {error_message}"
+                )
+
+                results[tool_name] = {
+                    "error": error_message,
+                }
+
+                execution_steps.append(
+                    ExecutionStep(
+                        step_number=step_number,
+                        tool_name=tool_name,
+                        success=False,
+                        error=error_message,
+                    )
+                )
+
+        return results, execution_steps
+
+    def interpret_results(
         self,
         plan: AnalysisPlan,
         results: dict[str, Any],
-    ) -> AgentResponse:
-        """Convert all tool results into a structured response."""
+    ) -> list[str]:
+        """Interpret all successful tool results."""
 
-        if not results:
-            return AgentResponse(
-                answer=(
-                    "No analysis results "
-                    "were generated."
-                ),
-                confidence=0.0,
-                tools_used=plan.tools,
-                status="failed",
-            )
-
-        interpretations = []
+        interpretations: list[str] = []
 
         for tool_name in plan.tools:
-
             if tool_name not in results:
                 continue
 
             result = results[tool_name]
+
+            if (
+                isinstance(result, dict)
+                and "error" in result
+            ):
+                continue
 
             interpretation = interpret_result(
                 tool_name,
@@ -88,6 +132,42 @@ class AgentExecutor:
                     interpretation
                 )
 
+        return interpretations
+
+    def create_response(
+        self,
+        plan: AnalysisPlan,
+        results: dict[str, Any],
+        execution_steps: list[ExecutionStep],
+    ) -> AgentResponse:
+        """Create the final agent response."""
+
+        if not results:
+            return AgentResponse(
+                answer="No analysis results were generated.",
+                confidence=0.0,
+                tools_used=[],
+                execution_steps=execution_steps,
+                status="failed",
+            )
+
+        interpretations = self.interpret_results(
+            plan,
+            results,
+        )
+
+        successful_tools = [
+            step.tool_name
+            for step in execution_steps
+            if step.success
+        ]
+
+        failed_tools = [
+            step.tool_name
+            for step in execution_steps
+            if not step.success
+        ]
+
         if not interpretations:
             return AgentResponse(
                 answer=(
@@ -96,17 +176,25 @@ class AgentExecutor:
                     "were generated."
                 ),
                 confidence=0.0,
-                tools_used=plan.tools,
+                tools_used=successful_tools,
+                execution_steps=execution_steps,
                 status="failed",
             )
 
-        answer = "\n\n".join(
-            interpretations
-        )
+        answer_parts = interpretations
+
+        if failed_tools:
+            answer_parts.append(
+                "The following analysis steps "
+                "could not be completed: "
+                + ", ".join(failed_tools)
+                + "."
+            )
 
         return AgentResponse(
-            answer=answer,
+            answer="\n\n".join(answer_parts),
             confidence=0.95,
-            tools_used=plan.tools,
+            tools_used=successful_tools,
+            execution_steps=execution_steps,
             status="success",
         )

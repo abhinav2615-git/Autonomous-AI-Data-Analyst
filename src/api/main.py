@@ -136,7 +136,7 @@ async def analyze_dataset(
         plan = planner.create_plan(question)
 
         # Execute all selected tools.
-        results = executor.execute_plan(
+        results, execution_steps = executor.execute_plan(
             plan,
             dataframe,
         )
@@ -145,6 +145,7 @@ async def analyze_dataset(
         agent_response = executor.create_response(
             plan,
             results,
+            execution_steps,
         )
 
         # Generate charts for tools that support visualization.
@@ -169,6 +170,10 @@ async def analyze_dataset(
             "answer": agent_response.answer,
             "confidence": agent_response.confidence,
             "tools_used": agent_response.tools_used,
+            "execution_steps": [
+                step.model_dump()
+                for step in agent_response.execution_steps
+            ],
             "charts": charts,
             "dataset": {
                 "file_name": file.filename,
