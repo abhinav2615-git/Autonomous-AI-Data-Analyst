@@ -1,252 +1,162 @@
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.staticfiles import StaticFiles
 
 from src.agent.chart_router import generate_chart_for_tool
 from src.agent.executor import AgentExecutor
-from src.agent.mock_llm import create_mock_analysis_plan
+from src.agent.planner_factory import create_planner
 from src.agent.tools import create_tool_registry
 from src.tools.data_loader import load_data
 
 
 app = FastAPI(
     title="Autonomous AI Data Analyst",
-    description="Backend API for the AI-powered data analysis agent.",
+    description="AI-powered data analysis API",
     version="1.0.0",
 )
 
 
-CHART_DIRECTORY = Path(
-    "data/outputs/charts"
-)
-
-CHART_DIRECTORY.mkdir(
-    parents=True,
-    exist_ok=True,
-)
-
+CHART_DIRECTORY = Path("data/outputs/charts")
+CHART_DIRECTORY.mkdir(parents=True, exist_ok=True)
 
 app.mount(
     "/charts",
-    StaticFiles(
-        directory=str(CHART_DIRECTORY)
-    ),
+    StaticFiles(directory=CHART_DIRECTORY),
     name="charts",
 )
 
 
 @app.get("/")
-def root() -> dict[str, str]:
-    """Return basic API information."""
-
+def root():
     return {
-        "message": (
-            "Autonomous AI Data Analyst "
-            "API is running."
-        ),
-        "status": "success",
+        "message": "Autonomous AI Data Analyst API is running."
     }
 
 
 @app.get("/health")
-def health_check() -> dict[str, str]:
-    """Check whether the backend is running."""
-
+def health():
     return {
-        "status": "healthy",
+        "status": "healthy"
     }
 
 
 @app.post("/profile")
 async def profile_dataset(
-    file: UploadFile = File(...),
-) -> dict:
-    """Upload a CSV/XLSX dataset and return its profile."""
+    file: UploadFile = File(...)
+):
+    suffix = Path(file.filename).suffix.lower()
 
-    if not file.filename:
-        raise HTTPException(
-            status_code=400,
-            detail="A dataset file is required.",
-        )
+    if suffix not in [".csv", ".xlsx", ".xls"]:
+        return {
+            "status": "failed",
+            "message": "Unsupported file type."
+        }
 
-    supported_extensions = {
-        ".csv",
-        ".xlsx",
-        ".xls",
-    }
-
-    file_extension = Path(
-        file.filename
-    ).suffix.lower()
-
-    if file_extension not in supported_extensions:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Unsupported file type. "
-                "Use CSV, XLSX, or XLS."
-            ),
-        )
+    temporary_path = None
 
     try:
-        file_bytes = await file.read()
-
         with NamedTemporaryFile(
-            suffix=file_extension,
             delete=False,
+            suffix=suffix,
         ) as temporary_file:
-            temporary_file.write(file_bytes)
-            temporary_file_path = (
-                temporary_file.name
-            )
+            temporary_file.write(await file.read())
+            temporary_path = temporary_file.name
 
-        dataset = load_data(
-            temporary_file_path
-        )
+        dataframe = load_data(temporary_path)
 
         registry = create_tool_registry()
+        executor = AgentExecutor(registry)
 
-        executor = AgentExecutor(
-            registry
-        )
-
-        profile = executor.profile_dataset(
-            dataset
-        )
+        profile = executor.profile_dataset(dataframe)
 
         return {
             "status": "success",
             "file_name": file.filename,
+            "rows": len(dataframe),
+            "columns": len(dataframe.columns),
+            "column_names": dataframe.columns.tolist(),
             "profile": profile,
         }
 
     except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Profiling failed: {error}",
-        ) from error
+        return {
+            "status": "failed",
+            "message": str(error),
+        }
 
     finally:
-        if "temporary_file_path" in locals():
-            Path(
-                temporary_file_path
-            ).unlink(
-                missing_ok=True
-            )
+        if temporary_path:
+            Path(temporary_path).unlink(missing_ok=True)
 
 
 @app.post("/analyze")
 async def analyze_dataset(
     file: UploadFile = File(...),
     question: str = Form(...),
-) -> dict:
-    """Analyze an uploaded dataset using the AI agent."""
+):
+    suffix = Path(file.filename).suffix.lower()
+
+    if suffix not in [".csv", ".xlsx", ".xls"]:
+        return {
+            "status": "failed",
+            "message": "Unsupported file type."
+        }
 
     if not question.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Question cannot be empty.",
-        )
+        return {
+            "status": "failed",
+            "message": "Question cannot be empty."
+        }
 
-    if not file.filename:
-        raise HTTPException(
-            status_code=400,
-            detail="A dataset file is required.",
-        )
-
-    supported_extensions = {
-        ".csv",
-        ".xlsx",
-        ".xls",
-    }
-
-    file_extension = Path(
-        file.filename
-    ).suffix.lower()
-
-    if file_extension not in supported_extensions:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Unsupported file type. "
-                "Use CSV, XLSX, or XLS."
-            ),
-        )
+    temporary_path = None
 
     try:
-        # --------------------------------------------------
-        # LOAD DATASET
-        # --------------------------------------------------
-
-        file_bytes = await file.read()
-
         with NamedTemporaryFile(
-            suffix=file_extension,
             delete=False,
+            suffix=suffix,
         ) as temporary_file:
-            temporary_file.write(file_bytes)
-            temporary_file_path = (
-                temporary_file.name
-            )
+            temporary_file.write(await file.read())
+            temporary_path = temporary_file.name
 
-        dataset = load_data(
-            temporary_file_path
-        )
-
-        # --------------------------------------------------
-        # CREATE TOOL REGISTRY
-        # --------------------------------------------------
+        dataframe = load_data(temporary_path)
 
         registry = create_tool_registry()
 
-        # --------------------------------------------------
-        # CREATE ANALYSIS PLAN
-        # --------------------------------------------------
+        # Create the configured planner.
+        #
+        # By default this returns MockPlanner.
+        # If USE_LLM_PLANNER=true, it returns LLMPlanner.
+        planner = create_planner(registry)
 
-        planner = create_mock_analysis_plan(
-            question
-        )
+        executor = AgentExecutor(registry)
 
-        # --------------------------------------------------
-        # EXECUTE PLAN
-        # --------------------------------------------------
+        # Create analysis plan.
+        plan = planner.create_plan(question)
 
-        executor = AgentExecutor(
-            registry
-        )
-
+        # Execute all selected tools.
         results = executor.execute_plan(
-            planner,
-            dataset,
+            plan,
+            dataframe,
         )
 
-        # --------------------------------------------------
-        # CREATE STRUCTURED RESPONSE
-        # --------------------------------------------------
-
-        response = executor.create_response(
-            planner,
+        # Convert tool results into a natural-language response.
+        agent_response = executor.create_response(
+            plan,
             results,
         )
 
-        # --------------------------------------------------
-        # GENERATE CHARTS
-        # --------------------------------------------------
-
+        # Generate charts for tools that support visualization.
         charts = []
 
-        for tool_name in planner.tools:
-
+        for tool_name in plan.tools:
             chart_url = generate_chart_for_tool(
                 tool_name,
-                dataset,
+                dataframe,
             )
 
-            if chart_url is not None:
-
+            if chart_url:
                 charts.append(
                     {
                         "tool": tool_name,
@@ -254,66 +164,47 @@ async def analyze_dataset(
                     }
                 )
 
-        # --------------------------------------------------
-        # RETURN RESPONSE
-        # --------------------------------------------------
-
         return {
-            "status": response.status,
-            "answer": response.answer,
-            "confidence": response.confidence,
-            "tools_used": response.tools_used,
-
+            "status": agent_response.status,
+            "answer": agent_response.answer,
+            "confidence": agent_response.confidence,
+            "tools_used": agent_response.tools_used,
             "charts": charts,
-
             "dataset": {
                 "file_name": file.filename,
-                "rows": len(dataset),
-                "columns": len(dataset.columns),
-                "column_names": (
-                    dataset.columns.tolist()
-                ),
+                "rows": len(dataframe),
+                "columns": len(dataframe.columns),
+                "column_names": dataframe.columns.tolist(),
             },
-
             "plan": {
-                "objective": planner.objective,
-                "steps": planner.steps,
-                "tools": planner.tools,
+                "objective": plan.objective,
+                "steps": plan.steps,
+                "tools": plan.tools,
             },
         }
 
     except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Analysis failed: {error}",
-        ) from error
+        return {
+            "status": "failed",
+            "message": str(error),
+        }
 
     finally:
-        if "temporary_file_path" in locals():
-            Path(
-                temporary_file_path
-            ).unlink(
-                missing_ok=True
-            )
+        if temporary_path:
+            Path(temporary_path).unlink(missing_ok=True)
 
 
 @app.get("/charts/{filename}")
-def get_chart(
-    filename: str,
-) -> FileResponse:
-    """Return a generated chart image."""
-
-    chart_path = (
-        CHART_DIRECTORY / filename
-    )
+def get_chart(filename: str):
+    chart_path = CHART_DIRECTORY / filename
 
     if not chart_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="Chart not found.",
-        )
+        return {
+            "status": "failed",
+            "message": "Chart not found."
+        }
 
-    return FileResponse(
-        chart_path,
-        media_type="image/png",
-    )
+    return {
+        "status": "success",
+        "filename": filename,
+    }
