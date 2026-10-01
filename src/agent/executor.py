@@ -7,6 +7,9 @@ from src.agent.result_evaluator import ResultEvaluator
 from src.agent.result_interpreter import interpret_result
 from src.agent.result_verifier import ResultVerifier
 from src.agent.tool_registry import ToolRegistry
+from src.agent.tool_requirements import (
+    validate_tool_requirements,
+)
 from src.models.agent import (
     AgentResponse,
     AnalysisPlan,
@@ -46,14 +49,161 @@ class AgentExecutor:
         self,
         tool_name: str,
         df: pd.DataFrame,
-    ) -> Any:
-        """Execute one analysis step."""
+        step_number: int,
+    ) -> tuple[Any, ExecutionStep]:
+        """
+        Validate and execute one analysis tool.
 
-        tool = self.registry.get(
-            tool_name
+        Schema requirements are checked before
+        the actual tool is executed.
+        """
+
+        print(
+            f"Executing step {step_number}: "
+            f"{tool_name}"
         )
 
-        return tool(df)
+        # --------------------------------------------------
+        # 1. Validate that the tool exists.
+        # --------------------------------------------------
+
+        try:
+            tool = self.registry.get(
+                tool_name
+            )
+
+        except KeyError as error:
+
+            print(
+                f"Step {step_number} failed: "
+                f"{tool_name} -> {error}"
+            )
+
+            execution_step = ExecutionStep(
+                step_number=step_number,
+                tool_name=tool_name,
+                success=False,
+                error=str(error),
+            )
+
+            return None, execution_step
+
+        # --------------------------------------------------
+        # 2. Validate dataset schema BEFORE execution.
+        # --------------------------------------------------
+
+        try:
+
+            requirement_check = (
+                validate_tool_requirements(
+                    tool_name=tool_name,
+                    available_columns=(
+                        df.columns.tolist()
+                    ),
+                )
+            )
+
+        except KeyError:
+
+            # If a tool has no explicit requirement
+            # definition yet, allow execution.
+            requirement_check = {
+                "valid": True,
+                "tool_name": tool_name,
+                "required_columns": [],
+                "missing_columns": [],
+                "reason": (
+                    "No explicit schema requirements "
+                    "are defined for this tool."
+                ),
+            }
+
+        if not requirement_check["valid"]:
+
+            error_message = (
+                "Schema validation failed. "
+                f"Missing columns: "
+                f"{requirement_check['missing_columns']}"
+            )
+
+            print(
+                f"Step {step_number} failed: "
+                f"{tool_name} -> "
+                f"{error_message}"
+            )
+
+            execution_step = ExecutionStep(
+                step_number=step_number,
+                tool_name=tool_name,
+                success=False,
+                error=error_message,
+            )
+
+            return None, execution_step
+
+        # --------------------------------------------------
+        # 3. Execute the tool.
+        # --------------------------------------------------
+
+        try:
+
+            result = tool(df)
+
+        except Exception as error:
+
+            print(
+                f"Step {step_number} failed: "
+                f"{tool_name} -> {error}"
+            )
+
+            execution_step = ExecutionStep(
+                step_number=step_number,
+                tool_name=tool_name,
+                success=False,
+                error=str(error),
+            )
+
+            return None, execution_step
+
+        # --------------------------------------------------
+        # 4. Verify the tool result.
+        # --------------------------------------------------
+
+        verification = self.verifier.verify(
+            tool_name,
+            result,
+        )
+
+        if not verification["valid"]:
+
+            print(
+                f"Verification failed: "
+                f"{tool_name} -> "
+                f"{verification['reason']}"
+            )
+
+            execution_step = ExecutionStep(
+                step_number=step_number,
+                tool_name=tool_name,
+                success=False,
+                error=verification["reason"],
+            )
+
+            return result, execution_step
+
+        print(
+            f"Verification passed: "
+            f"{tool_name}"
+        )
+
+        execution_step = ExecutionStep(
+            step_number=step_number,
+            tool_name=tool_name,
+            success=True,
+            error=None,
+        )
+
+        return result, execution_step
 
     def execute_plan(
         self,
@@ -64,9 +214,7 @@ class AgentExecutor:
         dict[str, Any],
         list[ExecutionStep],
     ]:
-        """
-        Execute and verify every tool in an analysis plan.
-        """
+        """Execute every tool in an analysis plan."""
 
         results: dict[str, Any] = {}
 
@@ -74,88 +222,24 @@ class AgentExecutor:
             ExecutionStep
         ] = []
 
-        for step_number, tool_name in enumerate(
+        for index, tool_name in enumerate(
             plan.tools,
             start=starting_step,
         ):
-            print(
-                f"Executing step {step_number}: "
-                f"{tool_name}"
+
+            result, execution_step = (
+                self.execute_step(
+                    tool_name=tool_name,
+                    df=df,
+                    step_number=index,
+                )
             )
 
-            try:
-                result = self.execute_step(
-                    tool_name,
-                    df,
-                )
+            results[tool_name] = result
 
-                verification = self.verifier.verify(
-                    tool_name,
-                    result,
-                )
-
-                if not verification["valid"]:
-                    error_message = (
-                        verification["reason"]
-                    )
-
-                    print(
-                        "Verification failed: "
-                        f"{tool_name} -> "
-                        f"{error_message}"
-                    )
-
-                    results[tool_name] = {
-                        "error": error_message,
-                    }
-
-                    execution_steps.append(
-                        ExecutionStep(
-                            step_number=step_number,
-                            tool_name=tool_name,
-                            success=False,
-                            error=error_message,
-                        )
-                    )
-
-                    continue
-
-                results[tool_name] = result
-
-                print(
-                    "Verification passed: "
-                    f"{tool_name}"
-                )
-
-                execution_steps.append(
-                    ExecutionStep(
-                        step_number=step_number,
-                        tool_name=tool_name,
-                        success=True,
-                    )
-                )
-
-            except Exception as error:
-                error_message = str(error)
-
-                print(
-                    f"Step {step_number} failed: "
-                    f"{tool_name} -> "
-                    f"{error_message}"
-                )
-
-                results[tool_name] = {
-                    "error": error_message,
-                }
-
-                execution_steps.append(
-                    ExecutionStep(
-                        step_number=step_number,
-                        tool_name=tool_name,
-                        success=False,
-                        error=error_message,
-                    )
-                )
+            execution_steps.append(
+                execution_step
+            )
 
         return (
             results,
@@ -166,7 +250,7 @@ class AgentExecutor:
         self,
         results: dict[str, Any],
     ) -> dict[str, Any]:
-        """Evaluate whether results are sufficient."""
+        """Evaluate whether analysis results are sufficient."""
 
         return self.evaluator.evaluate(
             results
@@ -174,19 +258,16 @@ class AgentExecutor:
 
     def interpret_results(
         self,
-        plan: AnalysisPlan,
         results: dict[str, Any],
     ) -> list[str]:
-        """Interpret verified tool results."""
+        """Convert successful results into human-readable insights."""
 
-        interpretations: list[str] = []
+        interpretations = []
 
-        for tool_name in plan.tools:
+        for tool_name, result in results.items():
 
-            if tool_name not in results:
+            if result is None:
                 continue
-
-            result = results[tool_name]
 
             if (
                 isinstance(result, dict)
@@ -194,14 +275,25 @@ class AgentExecutor:
             ):
                 continue
 
-            interpretation = interpret_result(
-                tool_name,
-                result,
-            )
+            try:
 
-            if interpretation:
+                interpretation = interpret_result(
+                    tool_name,
+                    result,
+                )
+
                 interpretations.append(
                     interpretation
+                )
+
+            except Exception as error:
+
+                interpretations.append(
+                    (
+                        f"{tool_name} completed, "
+                        f"but its result could not "
+                        f"be interpreted: {error}"
+                    )
                 )
 
         return interpretations
@@ -211,11 +303,10 @@ class AgentExecutor:
         execution_steps: list[ExecutionStep],
     ) -> float:
         """
-        Calculate execution confidence based on
-        successful tool verification.
+        Calculate confidence from execution success.
 
-        This is execution confidence, not statistical
-        confidence or model certainty.
+        Successful execution steps contribute
+        positively to confidence.
         """
 
         if not execution_steps:
@@ -232,7 +323,8 @@ class AgentExecutor:
         )
 
         return round(
-            successful_steps / total_steps,
+            successful_steps
+            / total_steps,
             2,
         )
 
@@ -244,34 +336,10 @@ class AgentExecutor:
     ) -> AgentResponse:
         """Create the final agent response."""
 
-        confidence = self.calculate_confidence(
-            execution_steps
-        )
-
-        evaluation = self.evaluate_results(
-            results
-        )
-
-        if not evaluation["sufficient"]:
-            return AgentResponse(
-                answer=(
-                    "The analysis did not produce "
-                    "sufficient verified results. "
-                    f"{evaluation['reason']}"
-                ),
-                confidence=confidence,
-                tools_used=[
-                    step.tool_name
-                    for step in execution_steps
-                    if step.success
-                ],
-                execution_steps=execution_steps,
-                status="failed",
+        interpretations = (
+            self.interpret_results(
+                results
             )
-
-        interpretations = self.interpret_results(
-            plan,
-            results,
         )
 
         successful_tools = [
@@ -286,37 +354,63 @@ class AgentExecutor:
             if not step.success
         ]
 
-        if not interpretations:
-            return AgentResponse(
-                answer=(
-                    "No verified analysis results "
-                    "were available to generate "
-                    "an answer."
-                ),
-                confidence=confidence,
-                tools_used=successful_tools,
-                execution_steps=execution_steps,
-                status="failed",
+        confidence = (
+            self.calculate_confidence(
+                execution_steps
+            )
+        )
+
+        if interpretations:
+
+            answer = "\n\n".join(
+                interpretations
             )
 
-        answer_parts = interpretations
+        elif failed_tools:
+
+            answer = (
+                "The requested analysis "
+                "could not be completed."
+            )
+
+        else:
+
+            answer = (
+                "No usable analysis results "
+                "were produced."
+            )
 
         if failed_tools:
-            answer_parts.append(
-                "The following analysis steps "
+
+            failed_summary = (
+                "\n\nThe following analysis steps "
                 "could not be verified or completed: "
-                + ", ".join(failed_tools)
+                + ", ".join(
+                    failed_tools
+                )
                 + "."
             )
 
+            answer += failed_summary
+
+        if not successful_tools:
+
+            status = "failed"
+
+        elif failed_tools:
+
+            status = "success"
+
+        else:
+
+            status = "success"
+
         return AgentResponse(
-            answer="\n\n".join(
-                answer_parts
-            ),
+            answer=answer,
             confidence=confidence,
             tools_used=successful_tools,
             execution_steps=execution_steps,
-            status="success",
+            status=status,
         )
 
     def execute_with_replanning(
@@ -330,13 +424,18 @@ class AgentExecutor:
         list[ExecutionStep],
     ]:
         """
-        Execute an initial plan and allow one controlled
-        re-planning attempt if the results are insufficient.
+        Execute a plan and re-plan when results
+        are insufficient.
+
+        Re-planning is limited to MAX_REPLANS.
         """
 
         current_plan = initial_plan
 
-        all_results: dict[str, Any] = {}
+        all_results: dict[
+            str,
+            Any,
+        ] = {}
 
         all_execution_steps: list[
             ExecutionStep
@@ -345,14 +444,16 @@ class AgentExecutor:
         replan_count = 0
 
         while True:
+
             starting_step = (
-                len(all_execution_steps) + 1
+                len(all_execution_steps)
+                + 1
             )
 
             results, execution_steps = (
                 self.execute_plan(
-                    current_plan,
-                    df,
+                    plan=current_plan,
+                    df=df,
                     starting_step=starting_step,
                 )
             )
@@ -365,55 +466,85 @@ class AgentExecutor:
                 execution_steps
             )
 
-            evaluation = self.evaluate_results(
-                all_results
+            evaluation = (
+                self.evaluate_results(
+                    all_results
+                )
             )
 
             if evaluation["sufficient"]:
+
                 return (
                     current_plan,
                     all_results,
                     all_execution_steps,
                 )
 
-            if replan_count >= MAX_REPLANS:
+            if (
+                replan_count
+                >= MAX_REPLANS
+            ):
+
+                print(
+                    "Maximum re-plan limit reached."
+                )
+
                 return (
                     current_plan,
                     all_results,
                     all_execution_steps,
                 )
-
-            previous_tools = [
-                step.tool_name
-                for step in all_execution_steps
-            ]
-
-            replan_request = ReplanRequest(
-                reason=evaluation["reason"],
-                previous_tools=previous_tools,
-            )
 
             print(
                 "Results were insufficient. "
                 "Attempting re-plan."
             )
 
-            current_plan = (
-                self.replanner.create_replan(
-                    question,
-                    replan_request,
-                )
+            previous_tools = [
+                step.tool_name
+                for step in all_execution_steps
+            ]
+
+            request = ReplanRequest(
+                reason=evaluation[
+                    "reason"
+                ],
+                previous_tools=(
+                    previous_tools
+                ),
             )
 
-            replan_count += 1
+            try:
+
+                new_plan = (
+                    self.replanner.create_replan(
+                        question=question,
+                        request=request,
+                    )
+                )
+
+            except Exception as error:
+
+                print(
+                    "Re-planning failed: "
+                    f"{error}"
+                )
+
+                return (
+                    current_plan,
+                    all_results,
+                    all_execution_steps,
+                )
 
             new_tools = [
                 tool
-                for tool in current_plan.tools
-                if tool not in previous_tools
+                for tool in new_plan.tools
+                if tool
+                not in previous_tools
             ]
 
             if not new_tools:
+
                 print(
                     "Re-planner did not select "
                     "any new tools."
@@ -426,7 +557,14 @@ class AgentExecutor:
                 )
 
             current_plan = AnalysisPlan(
-                objective=current_plan.objective,
-                steps=current_plan.steps,
+                objective=new_plan.objective,
+                steps=new_plan.steps,
                 tools=new_tools,
+            )
+
+            replan_count += 1
+
+            print(
+                f"Re-plan {replan_count} "
+                "created."
             )
