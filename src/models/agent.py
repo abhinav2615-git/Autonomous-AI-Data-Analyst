@@ -5,13 +5,22 @@ from pydantic import BaseModel, Field
 
 class ToolCall(BaseModel):
     tool_name: str
-    arguments: dict[str, Any] = Field(default_factory=dict)
+    arguments: dict[str, Any] = Field(
+        default_factory=dict
+    )
 
 
 class AnalysisPlan(BaseModel):
     objective: str
     steps: list[str]
     tools: list[str]
+
+
+class ReplanRequest(BaseModel):
+    reason: str
+    previous_tools: list[str] = Field(
+        default_factory=list
+    )
 
 
 class ExecutionStep(BaseModel):
@@ -23,7 +32,18 @@ class ExecutionStep(BaseModel):
 
 class AgentResponse(BaseModel):
     answer: str
-    confidence: float = Field(ge=0.0, le=1.0)
-    tools_used: list[str] = Field(default_factory=list)
-    execution_steps: list[ExecutionStep] = Field(default_factory=list)
-    status: Literal["success", "failed", "needs_input"]
+    confidence: float = Field(
+        ge=0.0,
+        le=1.0,
+    )
+    tools_used: list[str] = Field(
+        default_factory=list
+    )
+    execution_steps: list[ExecutionStep] = Field(
+        default_factory=list
+    )
+    status: Literal[
+        "success",
+        "failed",
+        "needs_input",
+    ]

@@ -2,6 +2,8 @@ from typing import Any
 
 import pandas as pd
 
+from src.agent.replanner import Replanner
+from src.agent.result_evaluator import ResultEvaluator
 from src.agent.result_interpreter import interpret_result
 from src.agent.result_verifier import ResultVerifier
 from src.agent.tool_registry import ToolRegistry
@@ -9,7 +11,11 @@ from src.models.agent import (
     AgentResponse,
     AnalysisPlan,
     ExecutionStep,
+    ReplanRequest,
 )
+
+
+MAX_REPLANS = 1
 
 
 class AgentExecutor:
@@ -21,6 +27,8 @@ class AgentExecutor:
     ) -> None:
         self.registry = registry
         self.verifier = ResultVerifier()
+        self.evaluator = ResultEvaluator()
+        self.replanner = Replanner()
 
     def profile_dataset(
         self,
@@ -51,17 +59,13 @@ class AgentExecutor:
         self,
         plan: AnalysisPlan,
         df: pd.DataFrame,
+        starting_step: int = 1,
     ) -> tuple[
         dict[str, Any],
         list[ExecutionStep],
     ]:
         """
-        Execute and verify every tool in the
-        analysis plan.
-
-        Each tool is executed independently.
-        Its result is verified before being
-        accepted for interpretation.
+        Execute and verify every tool in an analysis plan.
         """
 
         results: dict[str, Any] = {}
@@ -72,7 +76,7 @@ class AgentExecutor:
 
         for step_number, tool_name in enumerate(
             plan.tools,
-            start=1,
+            start=starting_step,
         ):
             print(
                 f"Executing step {step_number}: "
@@ -158,6 +162,16 @@ class AgentExecutor:
             execution_steps,
         )
 
+    def evaluate_results(
+        self,
+        results: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Evaluate whether results are sufficient."""
+
+        return self.evaluator.evaluate(
+            results
+        )
+
     def interpret_results(
         self,
         plan: AnalysisPlan,
@@ -234,14 +248,23 @@ class AgentExecutor:
             execution_steps
         )
 
-        if not results:
+        evaluation = self.evaluate_results(
+            results
+        )
+
+        if not evaluation["sufficient"]:
             return AgentResponse(
                 answer=(
-                    "No analysis results "
-                    "were generated."
+                    "The analysis did not produce "
+                    "sufficient verified results. "
+                    f"{evaluation['reason']}"
                 ),
                 confidence=confidence,
-                tools_used=[],
+                tools_used=[
+                    step.tool_name
+                    for step in execution_steps
+                    if step.success
+                ],
                 execution_steps=execution_steps,
                 status="failed",
             )
@@ -295,3 +318,115 @@ class AgentExecutor:
             execution_steps=execution_steps,
             status="success",
         )
+
+    def execute_with_replanning(
+        self,
+        question: str,
+        initial_plan: AnalysisPlan,
+        df: pd.DataFrame,
+    ) -> tuple[
+        AnalysisPlan,
+        dict[str, Any],
+        list[ExecutionStep],
+    ]:
+        """
+        Execute an initial plan and allow one controlled
+        re-planning attempt if the results are insufficient.
+        """
+
+        current_plan = initial_plan
+
+        all_results: dict[str, Any] = {}
+
+        all_execution_steps: list[
+            ExecutionStep
+        ] = []
+
+        replan_count = 0
+
+        while True:
+            starting_step = (
+                len(all_execution_steps) + 1
+            )
+
+            results, execution_steps = (
+                self.execute_plan(
+                    current_plan,
+                    df,
+                    starting_step=starting_step,
+                )
+            )
+
+            all_results.update(
+                results
+            )
+
+            all_execution_steps.extend(
+                execution_steps
+            )
+
+            evaluation = self.evaluate_results(
+                all_results
+            )
+
+            if evaluation["sufficient"]:
+                return (
+                    current_plan,
+                    all_results,
+                    all_execution_steps,
+                )
+
+            if replan_count >= MAX_REPLANS:
+                return (
+                    current_plan,
+                    all_results,
+                    all_execution_steps,
+                )
+
+            previous_tools = [
+                step.tool_name
+                for step in all_execution_steps
+            ]
+
+            replan_request = ReplanRequest(
+                reason=evaluation["reason"],
+                previous_tools=previous_tools,
+            )
+
+            print(
+                "Results were insufficient. "
+                "Attempting re-plan."
+            )
+
+            current_plan = (
+                self.replanner.create_replan(
+                    question,
+                    replan_request,
+                )
+            )
+
+            replan_count += 1
+
+            new_tools = [
+                tool
+                for tool in current_plan.tools
+                if tool not in previous_tools
+            ]
+
+            if not new_tools:
+                print(
+                    "Re-planner did not select "
+                    "any new tools."
+                )
+
+                return (
+                    current_plan,
+                    all_results,
+                    all_execution_steps,
+                )
+
+            current_plan = AnalysisPlan(
+                objective=current_plan.objective,
+                steps=current_plan.steps,
+                tools=new_tools,
+            )
