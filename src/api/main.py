@@ -19,7 +19,9 @@ app = FastAPI(
 )
 
 
-CHART_DIRECTORY = Path("data/outputs/charts")
+CHART_DIRECTORY = Path(
+    "data/outputs/charts"
+)
 
 CHART_DIRECTORY.mkdir(
     parents=True,
@@ -29,7 +31,9 @@ CHART_DIRECTORY.mkdir(
 
 app.mount(
     "/charts",
-    StaticFiles(directory=str(CHART_DIRECTORY)),
+    StaticFiles(
+        directory=str(CHART_DIRECTORY)
+    ),
     name="charts",
 )
 
@@ -39,7 +43,10 @@ def root() -> dict[str, str]:
     """Return basic API information."""
 
     return {
-        "message": "Autonomous AI Data Analyst API is running.",
+        "message": (
+            "Autonomous AI Data Analyst "
+            "API is running."
+        ),
         "status": "success",
     }
 
@@ -92,7 +99,9 @@ async def profile_dataset(
             delete=False,
         ) as temporary_file:
             temporary_file.write(file_bytes)
-            temporary_file_path = temporary_file.name
+            temporary_file_path = (
+                temporary_file.name
+            )
 
         dataset = load_data(
             temporary_file_path
@@ -168,6 +177,10 @@ async def analyze_dataset(
         )
 
     try:
+        # --------------------------------------------------
+        # LOAD DATASET
+        # --------------------------------------------------
+
         file_bytes = await file.read()
 
         with NamedTemporaryFile(
@@ -175,7 +188,9 @@ async def analyze_dataset(
             delete=False,
         ) as temporary_file:
             temporary_file.write(file_bytes)
-            temporary_file_path = temporary_file.name
+            temporary_file_path = (
+                temporary_file.name
+            )
 
         dataset = load_data(
             temporary_file_path
@@ -196,7 +211,7 @@ async def analyze_dataset(
         )
 
         # --------------------------------------------------
-        # EXECUTE ANALYSIS
+        # EXECUTE PLAN
         # --------------------------------------------------
 
         executor = AgentExecutor(
@@ -208,25 +223,36 @@ async def analyze_dataset(
             dataset,
         )
 
+        # --------------------------------------------------
+        # CREATE STRUCTURED RESPONSE
+        # --------------------------------------------------
+
         response = executor.create_response(
             planner,
             results,
         )
 
         # --------------------------------------------------
-        # AUTOMATIC CHART GENERATION
+        # GENERATE CHARTS
         # --------------------------------------------------
 
-        chart_url = None
+        charts = []
 
-        if planner.tools:
-
-            selected_tool = planner.tools[0]
+        for tool_name in planner.tools:
 
             chart_url = generate_chart_for_tool(
-                selected_tool,
+                tool_name,
                 dataset,
             )
+
+            if chart_url is not None:
+
+                charts.append(
+                    {
+                        "tool": tool_name,
+                        "url": chart_url,
+                    }
+                )
 
         # --------------------------------------------------
         # RETURN RESPONSE
@@ -237,13 +263,18 @@ async def analyze_dataset(
             "answer": response.answer,
             "confidence": response.confidence,
             "tools_used": response.tools_used,
-            "chart_url": chart_url,
+
+            "charts": charts,
+
             "dataset": {
                 "file_name": file.filename,
                 "rows": len(dataset),
                 "columns": len(dataset.columns),
-                "column_names": dataset.columns.tolist(),
+                "column_names": (
+                    dataset.columns.tolist()
+                ),
             },
+
             "plan": {
                 "objective": planner.objective,
                 "steps": planner.steps,
