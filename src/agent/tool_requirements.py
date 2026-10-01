@@ -12,6 +12,9 @@ TOOL_REQUIREMENTS = {
     "data_profiler": ToolRequirement(
         required_columns=(),
     ),
+    "schema_analyzer": ToolRequirement(
+        required_columns=(),
+    ),
     "revenue_by_country": ToolRequirement(
         required_columns=(
             "Country",

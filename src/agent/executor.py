@@ -10,6 +10,9 @@ from src.agent.tool_registry import ToolRegistry
 from src.agent.tool_requirements import (
     validate_tool_requirements,
 )
+from src.agent.question_tool_compatibility import (
+    check_tool_question_compatibility,
+)
 from src.models.agent import (
     AgentResponse,
     AnalysisPlan,
@@ -45,17 +48,29 @@ class AgentExecutor:
 
         return profiler(df)
 
+    def analyze_dataset_schema(
+        self,
+        df: pd.DataFrame,
+    ) -> dict:
+        """Analyze the structural and semantic dataset schema."""
+
+        schema_analyzer = self.registry.get(
+            "schema_analyzer"
+        )
+
+        return schema_analyzer(df)
+
     def execute_step(
         self,
         tool_name: str,
         df: pd.DataFrame,
         step_number: int,
+        question: str | None = None,
     ) -> tuple[Any, ExecutionStep]:
         """
         Validate and execute one analysis tool.
 
-        Schema requirements are checked before
-        the actual tool is executed.
+        Validation happens before tool execution.
         """
 
         print(
@@ -68,6 +83,7 @@ class AgentExecutor:
         # --------------------------------------------------
 
         try:
+
             tool = self.registry.get(
                 tool_name
             )
@@ -89,7 +105,7 @@ class AgentExecutor:
             return None, execution_step
 
         # --------------------------------------------------
-        # 2. Validate dataset schema BEFORE execution.
+        # 2. Validate dataset schema.
         # --------------------------------------------------
 
         try:
@@ -105,8 +121,6 @@ class AgentExecutor:
 
         except KeyError:
 
-            # If a tool has no explicit requirement
-            # definition yet, allow execution.
             requirement_check = {
                 "valid": True,
                 "tool_name": tool_name,
@@ -210,6 +224,7 @@ class AgentExecutor:
         plan: AnalysisPlan,
         df: pd.DataFrame,
         starting_step: int = 1,
+        question: str | None = None,
     ) -> tuple[
         dict[str, Any],
         list[ExecutionStep],
@@ -232,6 +247,7 @@ class AgentExecutor:
                     tool_name=tool_name,
                     df=df,
                     step_number=index,
+                    question=question,
                 )
             )
 
@@ -260,7 +276,7 @@ class AgentExecutor:
         self,
         results: dict[str, Any],
     ) -> list[str]:
-        """Convert successful results into human-readable insights."""
+        """Convert successful results into insights."""
 
         interpretations = []
 
@@ -304,9 +320,6 @@ class AgentExecutor:
     ) -> float:
         """
         Calculate confidence from execution success.
-
-        Successful execution steps contribute
-        positively to confidence.
         """
 
         if not execution_steps:
@@ -333,6 +346,8 @@ class AgentExecutor:
         plan: AnalysisPlan,
         results: dict[str, Any],
         execution_steps: list[ExecutionStep],
+        question: str | None = None,
+        schema: dict | None = None,
     ) -> AgentResponse:
         """Create the final agent response."""
 
@@ -359,6 +374,106 @@ class AgentExecutor:
                 execution_steps
             )
         )
+
+        # --------------------------------------------------
+        # Check whether successful tools actually match
+        # the user's question.
+        # --------------------------------------------------
+
+        compatible_tools = []
+
+        if question:
+
+            for tool_name in successful_tools:
+
+                try:
+
+                    compatibility = (
+                        check_tool_question_compatibility(
+                            tool_name=tool_name,
+                            question=question,
+                        )
+                    )
+
+                except KeyError:
+
+                    compatibility = {
+                        "compatible": True
+                    }
+
+                if compatibility[
+                    "compatible"
+                ]:
+
+                    compatible_tools.append(
+                        tool_name
+                    )
+
+        else:
+
+            compatible_tools = (
+                successful_tools
+            )
+
+        # --------------------------------------------------
+        # If successful results exist but none of them
+        # answer the question, do not present them as
+        # the answer.
+        # --------------------------------------------------
+
+        if question and successful_tools:
+
+            if not compatible_tools:
+
+                answer = (
+                    "The requested analysis "
+                    "could not be completed because "
+                    "the available dataset does not "
+                    "contain the information required "
+                    "to answer the question."
+                )
+
+                if schema:
+
+                    column_names = schema.get(
+                        "column_names",
+                        [],
+                    )
+
+                    if column_names:
+
+                        answer += (
+                            "\n\nAvailable dataset "
+                            "columns: "
+                            + ", ".join(
+                                column_names
+                            )
+                            + "."
+                        )
+
+                if failed_tools:
+
+                    answer += (
+                        "\n\nFailed analysis steps: "
+                        + ", ".join(
+                            failed_tools
+                        )
+                        + "."
+                    )
+
+                return AgentResponse(
+                    answer=answer,
+                    confidence=0.0,
+                    tools_used=[],
+                    execution_steps=(
+                        execution_steps
+                    ),
+                    status="needs_input",
+                )
+
+        # --------------------------------------------------
+        # Normal response generation.
+        # --------------------------------------------------
 
         if interpretations:
 
@@ -396,10 +511,6 @@ class AgentExecutor:
         if not successful_tools:
 
             status = "failed"
-
-        elif failed_tools:
-
-            status = "success"
 
         else:
 
@@ -455,6 +566,7 @@ class AgentExecutor:
                     plan=current_plan,
                     df=df,
                     starting_step=starting_step,
+                    question=question,
                 )
             )
 
@@ -536,9 +648,51 @@ class AgentExecutor:
                     all_execution_steps,
                 )
 
+            # --------------------------------------------------
+            # Only accept tools that are actually compatible
+            # with the user's question.
+            # --------------------------------------------------
+
+            compatible_new_tools = []
+
+            for tool in new_plan.tools:
+
+                try:
+
+                    compatibility = (
+                        check_tool_question_compatibility(
+                            tool_name=tool,
+                            question=question,
+                        )
+                    )
+
+                except KeyError:
+
+                    compatibility = {
+                        "compatible": False
+                    }
+
+                if compatibility[
+                    "compatible"
+                ]:
+
+                    compatible_new_tools.append(
+                        tool
+                    )
+
+                else:
+
+                    print(
+                        f"Re-planned tool '{tool}' "
+                        "is not compatible with "
+                        "the user's question. "
+                        "Skipping it."
+                    )
+
             new_tools = [
                 tool
-                for tool in new_plan.tools
+                for tool
+                in compatible_new_tools
                 if tool
                 not in previous_tools
             ]
@@ -546,8 +700,8 @@ class AgentExecutor:
             if not new_tools:
 
                 print(
-                    "Re-planner did not select "
-                    "any new tools."
+                    "No compatible new tools "
+                    "were selected."
                 )
 
                 return (

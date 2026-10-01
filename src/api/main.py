@@ -18,7 +18,10 @@ app = FastAPI(
 )
 
 
-CHART_DIRECTORY = Path("data/outputs/charts")
+CHART_DIRECTORY = Path(
+    "data/outputs/charts"
+)
+
 CHART_DIRECTORY.mkdir(
     parents=True,
     exist_ok=True,
@@ -27,7 +30,9 @@ CHART_DIRECTORY.mkdir(
 
 app.mount(
     "/charts",
-    StaticFiles(directory=CHART_DIRECTORY),
+    StaticFiles(
+        directory=CHART_DIRECTORY
+    ),
     name="charts",
 )
 
@@ -70,6 +75,7 @@ async def profile_dataset(
     temporary_path = None
 
     try:
+
         with NamedTemporaryFile(
             delete=False,
             suffix=suffix,
@@ -97,6 +103,12 @@ async def profile_dataset(
             dataframe
         )
 
+        schema = (
+            executor.analyze_dataset_schema(
+                dataframe
+            )
+        )
+
         return {
             "status": "success",
             "file_name": file.filename,
@@ -106,6 +118,7 @@ async def profile_dataset(
                 dataframe.columns.tolist()
             ),
             "profile": profile,
+            "schema": schema,
         }
 
     except Exception as error:
@@ -118,6 +131,7 @@ async def profile_dataset(
     finally:
 
         if temporary_path:
+
             Path(
                 temporary_path
             ).unlink(
@@ -145,6 +159,7 @@ async def analyze_dataset(
         }
 
     if not question.strip():
+
         return {
             "status": "failed",
             "message": "Question cannot be empty.",
@@ -173,57 +188,80 @@ async def analyze_dataset(
 
         registry = create_tool_registry()
 
-        # Create the configured planner.
-        #
-        # USE_LLM_PLANNER=false
-        #     -> MockPlanner
-        #
-        # USE_LLM_PLANNER=true
-        #     -> LLMPlanner with fallback.
-        planner = create_planner(
-            registry
-        )
-
         executor = AgentExecutor(
             registry
         )
 
-        # Create the initial analysis plan.
+        # ----------------------------------------------
+        # Analyze dataset schema before planning.
+        # ----------------------------------------------
+
+        schema = (
+            executor.analyze_dataset_schema(
+                dataframe
+            )
+        )
+
+        # ----------------------------------------------
+        # Create planner.
+        # ----------------------------------------------
+
+        planner = create_planner(
+            registry
+        )
+
+        # ----------------------------------------------
+        # Create initial analysis plan.
+        # ----------------------------------------------
+
         initial_plan = planner.create_plan(
             question
         )
 
-        # Execute the plan with controlled
-        # re-planning if results are insufficient.
-        final_plan, results, execution_steps = (
-            executor.execute_with_replanning(
-                question=question,
-                initial_plan=initial_plan,
-                df=dataframe,
-            )
+        # ----------------------------------------------
+        # Execute with controlled re-planning.
+        # ----------------------------------------------
+
+        (
+            final_plan,
+            results,
+            execution_steps,
+        ) = executor.execute_with_replanning(
+            question=question,
+            initial_plan=initial_plan,
+            df=dataframe,
         )
 
-        # Create the final agent response.
+        # ----------------------------------------------
+        # Create final response.
+        # ----------------------------------------------
+
         agent_response = (
             executor.create_response(
-                final_plan,
-                results,
-                execution_steps,
+                plan=final_plan,
+                results=results,
+                execution_steps=execution_steps,
+                question=question,
+                schema=schema,
             )
         )
 
-        # Generate charts for tools that support
-        # visualization.
+        # ----------------------------------------------
+        # Generate charts for successfully executed tools.
+        # ----------------------------------------------
+
         charts = []
 
         tools_for_charts = []
 
         for step in execution_steps:
+
             if (
                 step.success
                 and step.tool_name
                 not in tools_for_charts
             ):
+
                 tools_for_charts.append(
                     step.tool_name
                 )
@@ -245,6 +283,10 @@ async def analyze_dataset(
                         "url": chart_url,
                     }
                 )
+
+        # ----------------------------------------------
+        # Return complete analysis response.
+        # ----------------------------------------------
 
         return {
             "status": agent_response.status,
@@ -271,6 +313,7 @@ async def analyze_dataset(
                     dataframe.columns.tolist()
                 ),
             },
+            "schema": schema,
             "plan": {
                 "objective": (
                     final_plan.objective

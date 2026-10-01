@@ -1,6 +1,7 @@
 from src.tools.data_analyzer import (
     revenue_by_country,
     revenue_by_product,
+    revenue_by_customer,
     top_products_by_revenue,
     top_customers_by_revenue,
     units_by_product,
@@ -9,9 +10,17 @@ from src.tools.data_analyzer import (
     cancelled_transactions,
 )
 
-from src.tools.data_profiler import profile_data
+from src.tools.data_profiler import (
+    profile_data,
+)
 
-from src.agent.tool_registry import ToolRegistry
+from src.tools.schema_analyzer import (
+    analyze_schema,
+)
+
+from src.agent.tool_registry import (
+    ToolRegistry,
+)
 
 
 def create_tool_registry() -> ToolRegistry:
@@ -19,13 +28,16 @@ def create_tool_registry() -> ToolRegistry:
 
     registry = ToolRegistry()
 
-    # Dataset profiling
     registry.register(
         "data_profiler",
         profile_data,
     )
 
-    # Revenue analysis
+    registry.register(
+        "schema_analyzer",
+        analyze_schema,
+    )
+
     registry.register(
         "revenue_by_country",
         revenue_by_country,
@@ -34,6 +46,11 @@ def create_tool_registry() -> ToolRegistry:
     registry.register(
         "revenue_by_product",
         revenue_by_product,
+    )
+
+    registry.register(
+        "revenue_by_customer",
+        revenue_by_customer,
     )
 
     registry.register(
@@ -46,13 +63,11 @@ def create_tool_registry() -> ToolRegistry:
         top_customers_by_revenue,
     )
 
-    # Quantity analysis
     registry.register(
         "units_by_product",
         units_by_product,
     )
 
-    # Time-based analysis
     registry.register(
         "revenue_by_month",
         revenue_by_month,
@@ -63,7 +78,6 @@ def create_tool_registry() -> ToolRegistry:
         revenue_by_year,
     )
 
-    # Cancellation analysis
     registry.register(
         "cancelled_transactions",
         cancelled_transactions,
